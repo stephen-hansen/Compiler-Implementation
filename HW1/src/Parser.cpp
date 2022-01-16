@@ -174,6 +174,8 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
    // peek first char, determine type of expr
    char firstChar = input.peek();
    if (firstChar == '_') {
+      // Skip '_'
+      input.ignore();
       // Don't care assignment
       skipWhitespace(input);
       // Verify = following _
@@ -182,6 +184,8 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
       ASTExpression * e = parseExpr(input);
       return new DontCareAssignmentStatement(e);
    } else if (firstChar == '!') {
+      // Skip '!'
+      input.ignore();
       // Field update
       ASTExpression * obj = parseExpr(input);
       // Verify . following obj
@@ -200,7 +204,136 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
       return new FieldUpdateStatement(obj, fieldName, val);
    }
    // Okay, need more info
-   // TODO
+   // Go up to first non-alpha char
+   for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
+   std::string keyword = buf.str();
+   if (input.peek() == '(') {
+      // Expecting print(e)
+      if (keyword != "print") {
+         throw ParserException(std::string("Expected print statement, instead got \"") + buf.str() + "\"");
+      }
+      // Skip '('
+      input.ignore();
+      skipWhitespace(input);
+      // Parse expr
+      ASTExpression * e = parseExpr(input);
+      skipWhitespace(input);
+      advanceAndExpectChar(input, ')', "PrintStatement missing closing parenthesis");
+      return new PrintStatement(e);
+   }
+   skipWhitespace(input);
+   if (input.peek() == '=') {
+      // Assignment statement, keyword is varname
+      // Skip =
+      input.ignore();
+      skipWhitespace(input);
+      // Parse expr
+      ASTExpression * e = parseExpr(input);
+      return new AssignmentStatement(keyword, e);
+   }
+   // Must be a keyword, and input is pointing at expression now
+   if (keyword == "if") {
+      ASTExpression * cond = parseExpr(input);
+      skipWhitespace(input);
+      advanceAndExpectChar(input, ':', "IfElseStatement missing colon after cond");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '{', "IfElseStatement missing opening brace");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '\n', "IfElseStatement missing initial newline");
+      std::vector<std::shared_ptr<ASTStatement>> if_statements;
+      while (true) {
+         skipWhitespaceAndNewlines(input);
+         if (input.peek() == '}') {
+            input.ignore();
+            break;
+         }
+         // Find next statement
+         ASTStatement * stmt = parseStmt(input);
+         if_statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         skipWhitespace(input);
+         advanceAndExpectChar(input, '\n', "IfElseStatement missing newline between if statements");
+      }
+      if (if_statements.size() == 0) {
+         throw ParserException(std::string("IfElseStatement cannot have 0 if statements"));
+      }
+      skipWhitespaceAndNewlines(input);
+      advanceAndExpectWord(input, "else", "IfElseStatement missing else");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '{', "IfElseStatement missing opening brace after else");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '\n', "IfElseStatement missing initial newline after else");
+      std::vector<std::shared_ptr<ASTStatement>> else_statements;
+      while (true) {
+         skipWhitespaceAndNewlines(input);
+         if (input.peek() == '}') {
+            input.ignore();
+            break;
+         }
+         // Find next statement
+         ASTStatement * stmt = parseStmt(input);
+         else_statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         skipWhitespace(input);
+         advanceAndExpectChar(input, '\n', "IfElseStatement missing newline between else statements");
+      }
+      if (else_statements.size() == 0) {
+         throw ParserException(std::string("IfElseStatement cannot have 0 else statements"));
+      }
+      return new IfElseStatement(cond, if_statements, else_statements);
+   } else if (keyword == "ifonly") {
+      ASTExpression * cond = parseExpr(input);
+      skipWhitespace(input);
+      advanceAndExpectChar(input, ':', "IfOnlyStatement missing colon after cond");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '{', "IfOnlyStatement missing opening brace");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '\n', "IfOnlyStatement missing initial newline");
+      std::vector<std::shared_ptr<ASTStatement>> statements;
+      while (true) {
+         skipWhitespaceAndNewlines(input);
+         if (input.peek() == '}') {
+            input.ignore();
+            break;
+         }
+         // Find next statement
+         ASTStatement * stmt = parseStmt(input);
+         statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         skipWhitespace(input);
+         advanceAndExpectChar(input, '\n', "IfOnlyStatement missing newline between statements");
+      }
+      if (statements.size() == 0) {
+         throw ParserException(std::string("IfOnlyStatement cannot have 0 statements"));
+      }
+      return new IfOnlyStatement(cond, statements);
+   } else if (keyword == "while") {
+      ASTExpression * cond = parseExpr(input);
+      skipWhitespace(input);
+      advanceAndExpectChar(input, ':', "WhileStatement missing colon after cond");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '{', "WhileStatement missing opening brace");
+      skipWhitespace(input);
+      advanceAndExpectChar(input, '\n', "WhileStatement missing initial newline");
+      std::vector<std::shared_ptr<ASTStatement>> statements;
+      while (true) {
+         skipWhitespaceAndNewlines(input);
+         if (input.peek() == '}') {
+            input.ignore();
+            break;
+         }
+         // Find next statement
+         ASTStatement * stmt = parseStmt(input);
+         statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         skipWhitespace(input);
+         advanceAndExpectChar(input, '\n', "WhileStatement missing newline between statements");
+      }
+      if (statements.size() == 0) {
+         throw ParserException(std::string("WhileStatement cannot have 0 statements"));
+      }
+      return new WhileStatement(cond, statements);
+   } else if (keyword == "return") {
+      ASTExpression * e = parseExpr(input);
+      return new ReturnStatement(e);
+   }
+   throw ParserException(std::string("Found statement starting with \"" + keyword + "\" which is not a valid keyword"));
 }
 
 MethodDeclaration * ProgramParser::parseMethod(std::istream & input) {
