@@ -1,4 +1,5 @@
 #include <cctype>
+#include <iostream>
 #include <sstream>
 #include "Parser.h"
 
@@ -43,7 +44,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
    if (std::isdigit(firstChar)) {
       // Parse to integer expression
       // Will have length > 0 since firstChar exists
-      for (char nextChar = input.peek(); std::isdigit(nextChar); buf << input.get());
+      for (; std::isdigit(input.peek()); buf << static_cast<char>(input.get()));
       // Cast to 32 bit
       std::string numStr = buf.str();
       try {
@@ -57,7 +58,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
    } else if (std::isalpha(firstChar)) {
       // Parse to variable name
       // Will have length > 0 since firstChar exists
-      for (char nextChar = input.peek(); std::isalpha(nextChar); buf << input.get());
+      for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
       // Check buf, see if it is "this"
       std::string name = buf.str();
       // Build appropriate node
@@ -101,7 +102,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       // Verify . following e
       advanceAndExpectChar(input, '.', "CallExpression dot before method name");
       // Parse method name
-      for (char nextChar = input.peek(); std::isalnum(nextChar); buf << input.get());
+      for (; std::isalnum(input.peek()); buf << static_cast<char>(input.get()));
       if (buf.str().length() == 0) {
          throw ParserException("invalid method name");
       }
@@ -122,6 +123,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
             if (nextChar == ',') {
                // Skip ','
                input.ignore();
+               skipWhitespace(input);
             } else {
                throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: CallExpression comma before subsequent parameters");
             }
@@ -143,7 +145,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       // Verify . following e
       advanceAndExpectChar(input, '.', "FieldReadExpression dot before field name");
       // Parse field name
-      for (char nextChar = input.peek(); std::isalnum(nextChar); buf << input.get());
+      for (; std::isalnum(input.peek()); buf << static_cast<char>(input.get()));
       if (buf.str().length() == 0) {
          throw ParserException("invalid field name");
       }
@@ -154,7 +156,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       input.ignore();
       // Parse to new object
       // Parse class name
-      for (char nextChar = input.peek(); std::isupper(nextChar); buf << input.get());
+      for (; std::isupper(input.peek()); buf << static_cast<char>(input.get()));
       if (buf.str().length() == 0) {
          throw ParserException("invalid class name");
       }
@@ -185,7 +187,7 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
       // Verify . following obj
       advanceAndExpectChar(input, '.', "FieldUpdateStatement . following expression");
       // Parse field name
-      for (char nextChar = input.peek(); std::isalnum(nextChar); buf << input.get());
+      for (; std::isalnum(input.peek()); buf << static_cast<char>(input.get()));
       if (buf.str().length() == 0) {
          throw ParserException("invalid field name");
       }
@@ -239,7 +241,7 @@ ProgramDeclaration * ProgramParser::parse(std::istream & input) {
          // Break early, no locals
          break;
       }
-      for (char nextChar = input.peek(); std::isalpha(nextChar); buf << input.get());
+      for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
       if (buf.str().length() == 0) {
          throw ParserException("main has invalid named local");
       }

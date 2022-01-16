@@ -9,7 +9,6 @@
 class ASTNode
 {
    public:
-      virtual ~ASTNode() = 0;
       virtual std::string toString() = 0;
 };
 
@@ -50,7 +49,7 @@ class ArithmeticExpression : public ASTExpression
    public:
       ArithmeticExpression(char op, ASTExpression * e1, ASTExpression * e2): _op(op), _e1(e1), _e2(e2) {}
       std::string toString() {
-         return std::string("{\"type\":\"ArithmeticExpression\",\"op\":\"") + std::to_string(_op) +
+         return std::string("{\"type\":\"ArithmeticExpression\",\"op\":\"") + std::string(1,_op) +
             std::string("\",\"e1\":") + _e1->toString() + std::string(",\"e2\":") + _e2->toString() +
             std::string("}");
       }

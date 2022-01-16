@@ -12,6 +12,7 @@ class ParserException : public std::exception
       std::string _info;
    public:
       ParserException(std::string info): _info(info) {}
+      std::string info() { return _info; }
 };
 
 class MethodDeclaration
@@ -101,14 +102,38 @@ class ProgramDeclaration
          std::string out = std::string("{\"type\":\"ProgramDeclaration\",\"classes\":[");
          int i = 0;
          for (auto & c : _classes) {
+            if (i > 0) {
+               out += std::string(",");
+            }
+            out += c->toString();
+            i++;
          }
+         out += std::string("],\"main_locals\":[");
+         i = 0;
+         for (auto & l : _main_locals) {
+            if (i > 0) {
+               out += std::string(",");
+            }
+            out += std::string("\"") + l + std::string("\"");
+            i++;
+         }
+         out += std::string("],\"main_statements\":[");
+         i = 0;
+         for (auto & s : _main_statements) {
+            if (i > 0) {
+               out += std::string(",");
+            }
+            out += s->toString();
+            i++;
+         }
+         out += std::string("]}");
          return out;
       }
 };
 
 class ProgramParser
 {
-   private:
+   public:
       int skipChars(std::istream & input, std::string chars);
       void skipWhitespace(std::istream & input);
       void skipWhitespaceAndNewlines(std::istream & input);
@@ -118,7 +143,6 @@ class ProgramParser
       ASTStatement * parseStmt(std::istream & input);
       MethodDeclaration * parseMethod(std::istream & input);
       ClassDeclaration * parseClass(std::istream & input);
-   public:
       ProgramDeclaration * parse(std::istream & input);
 };
 
