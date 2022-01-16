@@ -42,7 +42,11 @@ class ProgramDeclaration
 class ProgramParser
 {
    private:
+      int skipChars(std::istream & input, std::string chars);
+      void skipWhitespace(std::istream & input, int minc=0);
+      void skipWhitespaceAndNewlines(std::istream & input);
       void advanceAndExpectChar(std::istream & input, char c, std::string addlInfo);
+      void advanceAndExpectWord(std::istream & input, std::string c, std::string addlInfo);
       ASTExpression parseExpr(std::istream & input);
       ASTStatement parseStmt(std::istream & input);
       MethodDeclaration parseMethod(std::istream & input);

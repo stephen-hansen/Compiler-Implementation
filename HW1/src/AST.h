@@ -74,12 +74,16 @@ class AssignmentStatement : public ASTStatement
    private:
       std::string _variable;
       ASTExpression _val;
+   public:
+      AssignmentStatement(std::string variable, ASTExpression val): _variable(variable), _val(val) {}
 };
 
 class DontCareAssignmentStatement : public ASTStatement
 {
    private:
       ASTExpression _val;
+   public:
+      DontCareAssignmentStatement(ASTExpression val): _val(val) {}
 };
 
 class FieldUpdateStatement : public ASTStatement
@@ -88,6 +92,8 @@ class FieldUpdateStatement : public ASTStatement
       ASTExpression _obj;
       std::string _field;
       ASTExpression _val;
+   public:
+      FieldUpdateStatement(ASTExpression obj, std::string field, ASTExpression val): _obj(obj), _field(field), _val(val) {}
 };
 
 class IfElseStatement : public ASTStatement
@@ -96,6 +102,8 @@ class IfElseStatement : public ASTStatement
       ASTExpression _cond;
       std::vector<ASTStatement> _if_statements;
       std::vector<ASTStatement> _else_statements;
+   public:
+      IfElseStatement(ASTExpression cond, std::vector<ASTStatement> if_statements, std::vector<ASTStatement> else_statements): _cond(cond), _if_statements(if_statements), _else_statements(else_statements) {}
 };
 
 class IfOnlyStatement : public ASTStatement
@@ -103,6 +111,8 @@ class IfOnlyStatement : public ASTStatement
    private:
       ASTExpression _cond;
       std::vector<ASTStatement> _statements;
+   public:
+      IfOnlyStatement(ASTExpression cond, std::vector<ASTStatement> statements): _cond(cond), _statements(statements) {}
 };
 
 class WhileStatement : public ASTStatement
@@ -110,18 +120,24 @@ class WhileStatement : public ASTStatement
    private:
       ASTExpression _cond;
       std::vector<ASTStatement> _statements;
+   public:
+      WhileStatement(ASTExpression cond, std::vector<ASTStatement> statements): _cond(cond), _statements(statements) {}
 };
 
 class ReturnStatement : public ASTStatement
 {
    private:
       ASTExpression _val;
+   public:
+      ReturnStatement(ASTExpression val): _val(val) {}
 };
 
 class PrintStatement : public ASTStatement
 {
    private:
       ASTExpression _val;
+   public:
+      PrintStatement(ASTExpression val): _val(val) {}
 };
 
 #endif

@@ -1,6 +1,27 @@
 #include <cctype>
+#include <sstream>
 #include "Parser.h"
-#include "Utils.h"
+
+int ProgramParser::skipChars(std::istream & input, std::string chars) {
+   int count = 0;
+   while (chars.find(input.peek()) != std::string::npos) {
+      input.ignore();
+      count++;
+   }
+   return count;
+}
+
+void ProgramParser::skipWhitespace(std::istream & input, int minc) {
+   int count = skipChars(input, " \t");
+   if (count < minc) {
+      // TODO
+      throw ParserException(std::string(""));
+   }
+}
+
+void ProgramParser::skipWhitespaceAndNewlines(std::istream & input) {
+   skipChars(input, " \t\r\n");
+}
 
 void ProgramParser::advanceAndExpectChar(std::istream & input, char c, std::string addlInfo) {
    char nextChar = input.get();
@@ -9,8 +30,17 @@ void ProgramParser::advanceAndExpectChar(std::istream & input, char c, std::stri
    }
 }
 
+void ProgramParser::advanceAndExpectWord(std::istream & input, std::string word, std::string addlInfo) {
+   for (char const & c : word) {
+      try {
+         advanceAndExpectChar(input, c, addlInfo);
+      } catch (const ParserException & p) {
+         throw ParserException(std::string("Expected \"") + word + "\", mismatch at char \'" + c + "\'. Context: " + addlInfo);
+      }
+   }
+}
+
 ASTExpression ProgramParser::parseExpr(std::istream & input) {
-   skipLeadingWhitespace(input);
    std::stringstream buf;
    // peek first char, determine type of expr
    char firstChar = input.peek();
@@ -41,19 +71,25 @@ ASTExpression ProgramParser::parseExpr(std::istream & input) {
    } else if (firstChar == '(') {
       // Skip '('
       input.ignore();
+      // Skip whitespace
+      skipWhitespace(input);
       // Parse to arithmetic expression
       // Recursively get first operand
       ASTExpression e1 = parseExpr(input);
-      // Verify space following e1
-      advanceAndExpectChar(input, ' ', "ArithmeticExpression space before operator");
+      // Skip whitespace
+      skipWhitespace(input);
+      // Get arithmetic operator
       char op = input.get();
       std::string valid_ops = "+-*/";
       if (valid_ops.find(op) == std::string::npos) {
          throw ParserException(std::string("\'") + op + "\' is not a valid arithmetic operator");
       }
-      advanceAndExpectChar(input, ' ', "ArithmeticExpression space after operator");
+      // Skip whitespace
+      skipWhitespace(input);
       // Recursively get second operand
       ASTExpression e2 = parseExpr(input);
+      // Skip whitespace
+      skipWhitespace(input);
       // Verify closing paren
       advanceAndExpectChar(input, ')', "ArithmeticExpression closing parenthesis");
       // Build ArithmeticExpression
@@ -75,6 +111,7 @@ ASTExpression ProgramParser::parseExpr(std::istream & input) {
       int numArgs = 0;
       std::vector<ASTExpression> args;
       while (numArgs < MAXARGS) {
+         skipWhitespace(input);
          char nextChar = input.peek();
          if (nextChar == ')') {
             // Done parsing args
@@ -93,6 +130,7 @@ ASTExpression ProgramParser::parseExpr(std::istream & input) {
          args.push_back(arg);
          numArgs++;
       }
+      skipWhitespace(input);
       advanceAndExpectChar(input, ')', "CallExpression closing parenthesis, or too many parameters");
       return CallExpression(e, methodName, args);
    } else if (firstChar == '&') {
@@ -122,6 +160,36 @@ ASTExpression ProgramParser::parseExpr(std::istream & input) {
 }
 
 ASTStatement ProgramParser::parseStmt(std::istream & input) {
+   // Assume we start at the start of the statement (no starting whitespace)
+   std::stringstream buf;
+   // peek first char, determine type of expr
+   char firstChar = input.peek();
+   if (firstChar == '_') {
+      // Don't care assignment
+      skipWhitespace(input);
+      // Verify = following _
+      advanceAndExpectChar(input, '=', "DontCareAssignmentStatement = following _");
+      skipWhitespace(input);
+      ASTExpression e = parseExpr(input);
+      return DontCareAssignmentStatement(e);
+   } else if (firstChar == '!') {
+      // Field update
+      ASTExpression obj = parseExpr(input);
+      // Verify . following obj
+      advanceAndExpectChar(input, '.', "FieldUpdateStatement . following expression");
+      // Parse field name
+      for (char nextChar = input.peek(); std::isalnum(nextChar); buf << input.get());
+      std::string fieldName = buf.str();
+      skipWhitespace(input);
+      // Verify = following fieldName
+      advanceAndExpectChar(input, '=', "FieldUpdateStatement = following field name");
+      skipWhitespace(input);
+      ASTExpression val = parseExpr(input);
+      return FieldUpdateStatement(obj, fieldName, val);
+   }
+   // Okay, need more info
+   // TODO
+
    return ASTStatement();
 }
 
@@ -134,6 +202,26 @@ ClassDeclaration ProgramParser::parseClass(std::istream & input) {
 }
 
 ProgramDeclaration ProgramParser::parse(std::istream & input) {
+   // Parse all classes
+   char firstChar;
+   std::vector<ClassDeclaration> classes;
+   while (true) {
+      skipWhitespaceAndNewlines(input);
+      firstChar = input.peek();
+      if (firstChar == 'c') {
+         // Assume it's a class, try to parse
+         ClassDeclaration newClass = parseClass(input);
+         classes.push_back(newClass);
+      } else {
+         break;
+      }
+   }
+   // Okay, we must be at main
+   advanceAndExpectWord(input, "main", "Missing main program block");
+   skipWhitespace(input, 1);
+   advanceAndExpectWord(input, "with", "Missing with after main");
+   skipWhitespace(input, 1);
+
    return ProgramDeclaration();
 }
 
