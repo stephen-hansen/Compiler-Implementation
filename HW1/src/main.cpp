@@ -15,7 +15,7 @@ int main(int argc, char ** argv) {
    }
    ProgramParser parser;
    try {
-      std::shared_ptr<ASTExpression> e = std::shared_ptr<ASTExpression>(parser.parseExpr(std::cin));
+      std::shared_ptr<ASTStatement> e = std::shared_ptr<ASTStatement>(parser.parseStmt(std::cin));
       if (printAST) {
          std::cout << e->toString() << std::endl;
          return 0;
