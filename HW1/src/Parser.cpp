@@ -12,18 +12,23 @@ int ProgramParser::skipChars(std::istream & input, std::string chars) {
    return count;
 }
 
-void ProgramParser::skipWhitespace(std::istream & input) {
-   skipChars(input, " \t");
+int ProgramParser::skipWhitespace(std::istream & input) {
+   return skipChars(input, " \t");
 }
 
-void ProgramParser::skipWhitespaceAndNewlines(std::istream & input) {
-   skipChars(input, " \t\r\n");
+int ProgramParser::skipWhitespaceAndNewlines(std::istream & input) {
+   return skipChars(input, " \t\r\n");
 }
 
 void ProgramParser::advanceAndExpectChar(std::istream & input, char c, std::string addlInfo) {
    char nextChar = input.get();
    if (nextChar != c) {
-      throw ParserException(std::string("Expected \'") + c + "\', instead got \'" + nextChar + "\'. Context: " + addlInfo);
+      // Windows hack, replace search for '\n' with search for "\r\n"
+      if (nextChar == '\r' && c == '\n' && input.peek() == '\n') {
+         input.ignore();
+      } else {
+         throw ParserException(std::string("Expected \'") + c + "\', instead got \'" + nextChar + "\'. Context: " + addlInfo);
+      }
    }
 }
 
@@ -104,7 +109,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       // Parse method name
       for (; std::isalnum(input.peek()); buf << static_cast<char>(input.get()));
       if (buf.str().length() == 0) {
-         throw ParserException("invalid method name");
+         throw ParserException("invalid empty method name");
       }
       std::string methodName = buf.str();
       // Verify ( following method name
@@ -337,9 +342,190 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
 }
 
 MethodDeclaration * ProgramParser::parseMethod(std::istream & input) {
+   // Expect "method"
+   advanceAndExpectWord(input, "method", "Method declaration must start with method");
+   advanceAndExpectChar(input, ' ', "Space must follow method keyword");
+   skipWhitespace(input);
+   // Read method name
+   std::stringstream buf;
+   // Parse method name
+   for (; std::isalnum(input.peek()); buf << static_cast<char>(input.get()));
+   if (buf.str().length() == 0) {
+      throw ParserException("invalid empty method name");
+   }
+   std::string methodname = buf.str();
+   advanceAndExpectChar(input, '(', "Method missing opening parenthesis");
+   // Parse 0-MAXARGS arguments
+   int numArgs = 0;
+   std::vector<std::string> args;
+   while (numArgs < MAXARGS) {
+      skipWhitespace(input);
+      char nextChar = input.peek();
+      if (nextChar == ')') {
+         // Done parsing args
+         break;
+      }
+      if (numArgs > 0) {
+         if (nextChar == ',') {
+            // Skip ','
+            input.ignore();
+            skipWhitespace(input);
+         } else {
+            throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: Method parameters");
+         }
+      }
+      std::stringstream buf2;
+      // Parse paramname
+      for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+      std::string arg = buf2.str();
+      args.push_back(arg);
+      numArgs++;
+   }
+   skipWhitespace(input);
+   advanceAndExpectChar(input, ')', "Method closing parenthesis, or too many parameters");
+   advanceAndExpectChar(input, ' ', "Missing space after method params list");
+   skipWhitespace(input);
+   advanceAndExpectWord(input, "with", "Missing with after method signature");
+   advanceAndExpectChar(input, ' ', "Missing space after with in method signature");
+   skipWhitespace(input);
+   advanceAndExpectWord(input, "locals", "Missing locals after method signature");
+   std::vector<std::string> locals;
+   numArgs = 0;
+   while (true) {
+      skipWhitespace(input);
+      char nextChar = input.peek();
+      if (nextChar == ':') {
+         // Done parsing locals
+         break;
+      }
+      if (numArgs > 0) {
+         if (nextChar == ',') {
+            // Skip ','
+            input.ignore();
+            skipWhitespace(input);
+         } else {
+            throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: Method locals");
+         }
+      }
+      std::stringstream buf2;
+      // Parse local name
+      for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+      std::string local = buf2.str();
+      locals.push_back(local);
+      numArgs++;
+   }
+   skipWhitespace(input);
+   advanceAndExpectChar(input, ':', "Missing closing colon for method");
+   skipWhitespace(input);
+   advanceAndExpectChar(input, '\n', "Missing newline at end of method definition");
+   // Parse all statements
+   std::vector<std::shared_ptr<ASTStatement>> statements;
+   while (true) {
+      skipWhitespaceAndNewlines(input);
+      // Check if end of class
+      char nextChar = input.peek();
+      if (nextChar == ']' || nextChar == EOF) {
+         break;
+      }
+      size_t offset;
+      // Dumb hack to figure out where a method ends
+      std::string endOfMethod = "method ";
+      std::stringstream buf2;
+      bool equalsEndOfMethod = true;
+      // Verify that statement does not start with "method "
+      for (offset=0; offset<endOfMethod.length(); offset++) {
+         if (input.peek() != endOfMethod[offset]) {
+            equalsEndOfMethod = false;
+            break;
+         }
+      }
+      // Got keyword "method" followed by space
+      if (equalsEndOfMethod) {
+         // Skip additional whitespace
+         offset += skipWhitespace(input);
+         // Check if we have =, if so it is a statement, otherwise it is the end of the method
+         if (input.peek() == '=') {
+            equalsEndOfMethod = false;
+         }
+         // Assume new method otherwise
+      }
+      // Move input pointer back
+      input.seekg(-offset, std::ios::cur);
+      if (equalsEndOfMethod) {
+         break;
+      }
+      // Arrived at first statement, parse it
+      ASTStatement * statement = parseStmt(input);
+      statements.push_back(std::shared_ptr<ASTStatement>(statement));
+      // Statement will not parse ending whitespace, so parse here
+      skipWhitespace(input);
+      // Assert newline
+      advanceAndExpectChar(input, '\n', "Missing newline at end of statement");
+   }
+   if (statements.size() == 0) {
+      throw ParserException(std::string("Method cannot be empty"));
+   }
+   return new MethodDeclaration(methodname, args, locals, statements); 
 }
 
 ClassDeclaration * ProgramParser::parseClass(std::istream & input) {
+   advanceAndExpectWord(input, "class", "Class must start with \"class\"");
+   skipWhitespace(input);
+   std::stringstream buf;
+   // Parse class name
+   for (; std::isupper(input.peek()); buf << static_cast<char>(input.get()));
+   if (buf.str().length() == 0) {
+      throw ParserException("invalid class name");
+   }
+   std::string classname = buf.str();
+   skipWhitespace(input);
+   advanceAndExpectChar(input, '[', "Class missing opening brace");
+   skipWhitespace(input);
+   advanceAndExpectChar(input, '\n', "Class missing opening newline");
+   skipWhitespaceAndNewlines(input);
+   std::vector<std::string> fields;
+   if (input.peek() == 'f') {
+      // Parse fields
+      advanceAndExpectWord(input, "fields", "Class expected \"fields\" but got something else");
+      advanceAndExpectChar(input, ' ', "Class missing space after \"fields\"");
+      int numArgs = 0;
+      while (true) {
+         skipWhitespace(input);
+         char nextChar = input.peek();
+         if (nextChar == ';' || nextChar == '\n') {
+            input.ignore();
+            // Done parsing locals
+            break;
+         }
+         if (numArgs > 0) {
+            if (nextChar == ',') {
+               // Skip ','
+               input.ignore();
+               skipWhitespace(input);
+            } else {
+               throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: class fields");
+            }
+         }
+         std::stringstream buf2;
+         // Parse field name
+         for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+         std::string field = buf2.str();
+         fields.push_back(field);
+         numArgs++;
+      }
+   }
+   std::vector<std::shared_ptr<MethodDeclaration>> methods;
+   while (true) {
+      skipWhitespaceAndNewlines(input);
+      // Parsing methods
+      if (input.peek() == ']') {
+         input.ignore();
+         break;
+      }
+      MethodDeclaration * method = parseMethod(input);
+      methods.push_back(std::unique_ptr<MethodDeclaration>(method));
+   }
+   return new ClassDeclaration(classname, fields, methods);
 }
 
 ProgramDeclaration * ProgramParser::parse(std::istream & input) {

@@ -23,6 +23,8 @@ class MethodDeclaration
       std::vector<std::string> _locals;
       std::vector<std::shared_ptr<ASTStatement>> _statements;
    public:
+      MethodDeclaration(std::string name, std::vector<std::string> params, std::vector<std::string> locals, std::vector<std::shared_ptr<ASTStatement>> statements):
+         _name(name), _params(params), _locals(locals), _statements(statements) {}
       std::string toString() {
          std::string out = std::string("{\"type\":\"MethodDeclaration\",\"name\":\"") +
             _name + std::string("\",\"params\":[");
@@ -64,6 +66,8 @@ class ClassDeclaration
       std::vector<std::string> _fields;
       std::vector<std::shared_ptr<MethodDeclaration>> _methods;
    public:
+      ClassDeclaration(std::string name, std::vector<std::string> fields, std::vector<std::shared_ptr<MethodDeclaration>> methods):
+         _name(name), _fields(fields), _methods(methods) {}
       std::string toString() {
          std::string out = std::string("{\"type\":\"ClassDeclaration\",\"name\":\"") +
             _name + std::string("\",\"fields\":[");
@@ -135,8 +139,8 @@ class ProgramParser
 {
    public:
       int skipChars(std::istream & input, std::string chars);
-      void skipWhitespace(std::istream & input);
-      void skipWhitespaceAndNewlines(std::istream & input);
+      int skipWhitespace(std::istream & input);
+      int skipWhitespaceAndNewlines(std::istream & input);
       void advanceAndExpectChar(std::istream & input, char c, std::string addlInfo);
       void advanceAndExpectWord(std::istream & input, std::string c, std::string addlInfo);
       ASTExpression * parseExpr(std::istream & input);

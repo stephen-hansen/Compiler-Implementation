@@ -15,12 +15,13 @@ int main(int argc, char ** argv) {
    }
    ProgramParser parser;
    try {
-      std::shared_ptr<ASTStatement> e = std::shared_ptr<ASTStatement>(parser.parseStmt(std::cin));
+      std::shared_ptr<ProgramDeclaration> p = std::shared_ptr<ProgramDeclaration>(parser.parse(std::cin));
       if (printAST) {
-         std::cout << e->toString() << std::endl;
+         std::cout << p->toString() << std::endl;
          return 0;
       }
    } catch (ParserException & p) {
+      std::cerr << "Parser error:" << std::endl;
       std::cerr << p.info() << std::endl;
       return 1;
    }
