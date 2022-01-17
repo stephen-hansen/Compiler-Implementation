@@ -438,19 +438,27 @@ MethodDeclaration * ProgramParser::parseMethod(std::istream & input) {
             equalsEndOfMethod = false;
             break;
          }
+         buf2 << static_cast<char>(input.get());
       }
       // Got keyword "method" followed by space
       if (equalsEndOfMethod) {
          // Skip additional whitespace
-         offset += skipWhitespace(input);
+         int skipped = skipWhitespace(input);
+         for (int i=0; i<skipped; i++) {
+            buf2 << " ";
+            offset++;
+         }
          // Check if we have =, if so it is a statement, otherwise it is the end of the method
          if (input.peek() == '=') {
             equalsEndOfMethod = false;
          }
          // Assume new method otherwise
       }
-      // Move input pointer back
-      input.seekg(-offset, std::ios::cur);
+      // Move input data back
+      std::string placeback = buf2.str();
+      for (size_t i=0; i<offset; i++) {
+         input.putback(placeback[offset-i-1]);
+      }
       if (equalsEndOfMethod) {
          break;
       }
