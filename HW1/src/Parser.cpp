@@ -42,7 +42,7 @@ void ProgramParser::advanceAndExpectWord(std::istream & input, std::string word,
    }
 }
 
-ASTExpression * ProgramParser::parseExpr(std::istream & input) {
+std::shared_ptr<ASTExpression> ProgramParser::parseExpr(std::istream & input) {
    std::stringstream buf;
    // peek first char, determine type of expr
    char firstChar = input.peek();
@@ -54,7 +54,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       std::string numStr = buf.str();
       try {
          uint32_t val = static_cast<uint32_t>(std::stoul(numStr));
-         return new UInt32Literal(val);
+         return std::make_shared<UInt32Literal>(val);
       } catch (const std::out_of_range & oor) {
          throw ParserException("Integer literal " + numStr + " is out of range.");
       } catch (const std::invalid_argument & ia) {
@@ -68,9 +68,9 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       std::string name = buf.str();
       // Build appropriate node
       if (name == "this") {
-         return new ThisObjectExpression();
+         return std::make_shared<ThisObjectExpression>();
       } else {
-         return new VariableIdentifier(name);
+         return std::make_shared<VariableIdentifier>(name);
       }
    } else if (firstChar == '(') {
       // Skip '('
@@ -79,7 +79,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       skipWhitespace(input);
       // Parse to arithmetic expression
       // Recursively get first operand
-      ASTExpression * e1 = parseExpr(input);
+      std::shared_ptr<ASTExpression> e1 = parseExpr(input);
       // Skip whitespace
       skipWhitespace(input);
       // Get arithmetic operator
@@ -91,19 +91,19 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
       // Skip whitespace
       skipWhitespace(input);
       // Recursively get second operand
-      ASTExpression * e2 = parseExpr(input);
+      std::shared_ptr<ASTExpression> e2 = parseExpr(input);
       // Skip whitespace
       skipWhitespace(input);
       // Verify closing paren
       advanceAndExpectChar(input, ')', "ArithmeticExpression closing parenthesis");
       // Build ArithmeticExpression
-      return new ArithmeticExpression(op, e1, e2);
+      return std::make_shared<ArithmeticExpression>(op, e1, e2);
    } else if (firstChar == '^') {
       // Skip '^'
       input.ignore();
       // Parse to method invocation
       // Parse object expression
-      ASTExpression * e = parseExpr(input);
+      std::shared_ptr<ASTExpression> e = parseExpr(input);
       // Verify . following e
       advanceAndExpectChar(input, '.', "CallExpression dot before method name");
       // Parse method name
@@ -134,19 +134,19 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
             }
          }
          // Parse arg recursively
-         ASTExpression * arg = parseExpr(input);
-         args.push_back(std::shared_ptr<ASTExpression>(arg));
+         std::shared_ptr<ASTExpression> arg = parseExpr(input);
+         args.push_back(arg);
          numArgs++;
       }
       skipWhitespace(input);
       advanceAndExpectChar(input, ')', "CallExpression closing parenthesis, or too many parameters");
-      return new CallExpression(e, methodName, args);
+      return std::make_shared<CallExpression>(e, methodName, args);
    } else if (firstChar == '&') {
       // Skip '&'
       input.ignore();
       // Parse to field read
       // Get object expression
-      ASTExpression * e = parseExpr(input);
+      std::shared_ptr<ASTExpression> e = parseExpr(input);
       // Verify . following e
       advanceAndExpectChar(input, '.', "FieldReadExpression dot before field name");
       // Parse field name
@@ -155,7 +155,7 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
          throw ParserException("invalid field name");
       }
       std::string fieldName = buf.str();
-      return new FieldReadExpression(e, fieldName);
+      return std::make_shared<FieldReadExpression>(e, fieldName);
    } else if (firstChar == '@') {
       // Skip '@'
       input.ignore();
@@ -166,14 +166,14 @@ ASTExpression * ProgramParser::parseExpr(std::istream & input) {
          throw ParserException("invalid class name");
       }
       std::string className = buf.str();
-      return new NewObjectExpression(className);
+      return std::make_shared<NewObjectExpression>(className);
    } else {
       // If we get an unexpected char or EOF we will hit this
       throw ParserException(std::string("\'") + firstChar + "\' does not start a valid expression");
    }
 }
 
-ASTStatement * ProgramParser::parseStmt(std::istream & input) {
+std::shared_ptr<ASTStatement> ProgramParser::parseStmt(std::istream & input) {
    // Assume we start at the start of the statement (no starting whitespace)
    std::stringstream buf;
    // peek first char, determine type of expr
@@ -186,13 +186,13 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
       // Verify = following _
       advanceAndExpectChar(input, '=', "DontCareAssignmentStatement = following _");
       skipWhitespace(input);
-      ASTExpression * e = parseExpr(input);
-      return new DontCareAssignmentStatement(e);
+      std::shared_ptr<ASTExpression> e = parseExpr(input);
+      return std::make_shared<DontCareAssignmentStatement>(e);
    } else if (firstChar == '!') {
       // Skip '!'
       input.ignore();
       // Field update
-      ASTExpression * obj = parseExpr(input);
+      std::shared_ptr<ASTExpression> obj = parseExpr(input);
       // Verify . following obj
       advanceAndExpectChar(input, '.', "FieldUpdateStatement . following expression");
       // Parse field name
@@ -205,8 +205,8 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
       // Verify = following fieldName
       advanceAndExpectChar(input, '=', "FieldUpdateStatement = following field name");
       skipWhitespace(input);
-      ASTExpression * val = parseExpr(input);
-      return new FieldUpdateStatement(obj, fieldName, val);
+      std::shared_ptr<ASTExpression> val = parseExpr(input);
+      return std::make_shared<FieldUpdateStatement>(obj, fieldName, val);
    }
    // Okay, need more info
    // Go up to first non-alpha char
@@ -221,10 +221,10 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
       input.ignore();
       skipWhitespace(input);
       // Parse expr
-      ASTExpression * e = parseExpr(input);
+      std::shared_ptr<ASTExpression> e = parseExpr(input);
       skipWhitespace(input);
       advanceAndExpectChar(input, ')', "PrintStatement missing closing parenthesis");
-      return new PrintStatement(e);
+      return std::make_shared<PrintStatement>(e);
    }
    skipWhitespace(input);
    if (input.peek() == '=') {
@@ -233,12 +233,12 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
       input.ignore();
       skipWhitespace(input);
       // Parse expr
-      ASTExpression * e = parseExpr(input);
-      return new AssignmentStatement(keyword, e);
+      std::shared_ptr<ASTExpression> e = parseExpr(input);
+      return std::make_shared<AssignmentStatement>(keyword, e);
    }
    // Must be a keyword, and input is pointing at expression now
    if (keyword == "if") {
-      ASTExpression * cond = parseExpr(input);
+      std::shared_ptr<ASTExpression> cond = parseExpr(input);
       skipWhitespace(input);
       advanceAndExpectChar(input, ':', "IfElseStatement missing colon after cond");
       skipWhitespace(input);
@@ -253,8 +253,8 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
             break;
          }
          // Find next statement
-         ASTStatement * stmt = parseStmt(input);
-         if_statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         std::shared_ptr<ASTStatement> stmt = parseStmt(input);
+         if_statements.push_back(stmt);
          skipWhitespace(input);
          advanceAndExpectChar(input, '\n', "IfElseStatement missing newline between if statements");
       }
@@ -275,17 +275,17 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
             break;
          }
          // Find next statement
-         ASTStatement * stmt = parseStmt(input);
-         else_statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         std::shared_ptr<ASTStatement> stmt = parseStmt(input);
+         else_statements.push_back(stmt);
          skipWhitespace(input);
          advanceAndExpectChar(input, '\n', "IfElseStatement missing newline between else statements");
       }
       if (else_statements.size() == 0) {
          throw ParserException(std::string("IfElseStatement cannot have 0 else statements"));
       }
-      return new IfElseStatement(cond, if_statements, else_statements);
+      return std::make_shared<IfElseStatement>(cond, if_statements, else_statements);
    } else if (keyword == "ifonly") {
-      ASTExpression * cond = parseExpr(input);
+      std::shared_ptr<ASTExpression> cond = parseExpr(input);
       skipWhitespace(input);
       advanceAndExpectChar(input, ':', "IfOnlyStatement missing colon after cond");
       skipWhitespace(input);
@@ -300,17 +300,17 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
             break;
          }
          // Find next statement
-         ASTStatement * stmt = parseStmt(input);
-         statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         std::shared_ptr<ASTStatement> stmt = parseStmt(input);
+         statements.push_back(stmt);
          skipWhitespace(input);
          advanceAndExpectChar(input, '\n', "IfOnlyStatement missing newline between statements");
       }
       if (statements.size() == 0) {
          throw ParserException(std::string("IfOnlyStatement cannot have 0 statements"));
       }
-      return new IfOnlyStatement(cond, statements);
+      return std::make_shared<IfOnlyStatement>(cond, statements);
    } else if (keyword == "while") {
-      ASTExpression * cond = parseExpr(input);
+      std::shared_ptr<ASTExpression> cond = parseExpr(input);
       skipWhitespace(input);
       advanceAndExpectChar(input, ':', "WhileStatement missing colon after cond");
       skipWhitespace(input);
@@ -325,23 +325,23 @@ ASTStatement * ProgramParser::parseStmt(std::istream & input) {
             break;
          }
          // Find next statement
-         ASTStatement * stmt = parseStmt(input);
-         statements.push_back(std::shared_ptr<ASTStatement>(stmt));
+         std::shared_ptr<ASTStatement> stmt = parseStmt(input);
+         statements.push_back(stmt);
          skipWhitespace(input);
          advanceAndExpectChar(input, '\n', "WhileStatement missing newline between statements");
       }
       if (statements.size() == 0) {
          throw ParserException(std::string("WhileStatement cannot have 0 statements"));
       }
-      return new WhileStatement(cond, statements);
+      return std::make_shared<WhileStatement>(cond, statements);
    } else if (keyword == "return") {
-      ASTExpression * e = parseExpr(input);
-      return new ReturnStatement(e);
+      std::shared_ptr<ASTExpression> e = parseExpr(input);
+      return std::make_shared<ReturnStatement>(e);
    }
    throw ParserException(std::string("Found statement starting with \"" + keyword + "\" which is not a valid keyword"));
 }
 
-MethodDeclaration * ProgramParser::parseMethod(std::istream & input) {
+std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & input) {
    // Expect "method"
    advanceAndExpectWord(input, "method", "Method declaration must start with method");
    advanceAndExpectChar(input, ' ', "Space must follow method keyword");
@@ -463,8 +463,8 @@ MethodDeclaration * ProgramParser::parseMethod(std::istream & input) {
          break;
       }
       // Arrived at first statement, parse it
-      ASTStatement * statement = parseStmt(input);
-      statements.push_back(std::shared_ptr<ASTStatement>(statement));
+      std::shared_ptr<ASTStatement> statement = parseStmt(input);
+      statements.push_back(statement);
       // Statement will not parse ending whitespace, so parse here
       skipWhitespace(input);
       // Assert newline
@@ -473,10 +473,10 @@ MethodDeclaration * ProgramParser::parseMethod(std::istream & input) {
    if (statements.size() == 0) {
       throw ParserException(std::string("Method cannot be empty"));
    }
-   return new MethodDeclaration(methodname, args, locals, statements); 
+   return std::make_shared<MethodDeclaration>(methodname, args, locals, statements); 
 }
 
-ClassDeclaration * ProgramParser::parseClass(std::istream & input) {
+std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input) {
    advanceAndExpectWord(input, "class", "Class must start with \"class\"");
    skipWhitespace(input);
    std::stringstream buf;
@@ -530,13 +530,13 @@ ClassDeclaration * ProgramParser::parseClass(std::istream & input) {
          input.ignore();
          break;
       }
-      MethodDeclaration * method = parseMethod(input);
-      methods.push_back(std::unique_ptr<MethodDeclaration>(method));
+      std::shared_ptr<MethodDeclaration> method = parseMethod(input);
+      methods.push_back(method);
    }
-   return new ClassDeclaration(classname, fields, methods);
+   return std::make_shared<ClassDeclaration>(classname, fields, methods);
 }
 
-ProgramDeclaration * ProgramParser::parse(std::istream & input) {
+std::shared_ptr<ProgramDeclaration> ProgramParser::parse(std::istream & input) {
    // Parse all classes
    char firstChar;
    std::vector<std::shared_ptr<ClassDeclaration>> classes;
@@ -545,8 +545,8 @@ ProgramDeclaration * ProgramParser::parse(std::istream & input) {
       firstChar = input.peek();
       if (firstChar == 'c') {
          // Assume it's a class, try to parse
-         ClassDeclaration * newClass = parseClass(input);
-         classes.push_back(std::shared_ptr<ClassDeclaration>(newClass));
+         std::shared_ptr<ClassDeclaration> newClass = parseClass(input);
+         classes.push_back(newClass);
          // Class will not parse ending whitespace, so parse here, assert newline
          skipWhitespace(input);
          advanceAndExpectChar(input, '\n', "Missing newline at end of class definition");
@@ -594,8 +594,8 @@ ProgramDeclaration * ProgramParser::parse(std::istream & input) {
          break;
       }
       // Arrived at first statement, parse it
-      ASTStatement * statement = parseStmt(input);
-      statements.push_back(std::shared_ptr<ASTStatement>(statement));
+      std::shared_ptr<ASTStatement> statement = parseStmt(input);
+      statements.push_back(statement);
       // Statement will not parse ending whitespace, so parse here
       skipWhitespace(input);
       // Assert newline OR eof
@@ -609,6 +609,6 @@ ProgramDeclaration * ProgramParser::parse(std::istream & input) {
       }
    }
 
-   return new ProgramDeclaration(classes, main_locals, statements);
+   return std::make_shared<ProgramDeclaration>(classes, main_locals, statements);
 }
 

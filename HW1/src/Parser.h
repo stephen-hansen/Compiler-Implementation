@@ -23,11 +23,11 @@ class ProgramParser
       int skipWhitespaceAndNewlines(std::istream & input);
       void advanceAndExpectChar(std::istream & input, char c, std::string addlInfo);
       void advanceAndExpectWord(std::istream & input, std::string c, std::string addlInfo);
-      ASTExpression * parseExpr(std::istream & input);
-      ASTStatement * parseStmt(std::istream & input);
-      MethodDeclaration * parseMethod(std::istream & input);
-      ClassDeclaration * parseClass(std::istream & input);
-      ProgramDeclaration * parse(std::istream & input);
+      std::shared_ptr<ASTExpression> parseExpr(std::istream & input);
+      std::shared_ptr<ASTStatement> parseStmt(std::istream & input);
+      std::shared_ptr<MethodDeclaration> parseMethod(std::istream & input);
+      std::shared_ptr<ClassDeclaration> parseClass(std::istream & input);
+      std::shared_ptr<ProgramDeclaration> parse(std::istream & input);
 };
 
 #endif

@@ -1,5 +1,6 @@
 #ifndef _CS441_AST_H
 #define _CS441_AST_H
+#include <iostream>
 #include <memory>
 #include <string>
 #include <vector>
@@ -47,7 +48,7 @@ class ArithmeticExpression : public ASTExpression
       std::shared_ptr<ASTExpression> _e1;
       std::shared_ptr<ASTExpression> _e2;
    public:
-      ArithmeticExpression(char op, ASTExpression * e1, ASTExpression * e2): _op(op), _e1(e1), _e2(e2) {}
+      ArithmeticExpression(char op, std::shared_ptr<ASTExpression> e1, std::shared_ptr<ASTExpression> e2): _op(op), _e1(e1), _e2(e2) {}
       std::string toString() {
          return std::string("{\"type\":\"ArithmeticExpression\",\"op\":\"") + std::string(1,_op) +
             std::string("\",\"e1\":") + _e1->toString() + std::string(",\"e2\":") + _e2->toString() +
@@ -62,7 +63,7 @@ class CallExpression : public ASTExpression
       std::string _method;
       std::vector<std::shared_ptr<ASTExpression>> _params;
    public:
-      CallExpression(ASTExpression * obj, std::string method, std::vector<std::shared_ptr<ASTExpression>> params): _obj(obj), _method(method), _params(params) {}
+      CallExpression(std::shared_ptr<ASTExpression> obj, std::string method, std::vector<std::shared_ptr<ASTExpression>> params): _obj(obj), _method(method), _params(params) {}
       std::string toString() {
          std::string out = std::string("{\"type\":\"CallExpression\",\"obj\":") + _obj->toString() +
             std::string(",\"method\":\"") + _method + std::string("\",\"params\":[");
@@ -85,7 +86,7 @@ class FieldReadExpression : public ASTExpression
       std::shared_ptr<ASTExpression> _obj;
       std::string _field;
    public:
-      FieldReadExpression(ASTExpression * obj, std::string field): _obj(obj), _field(field) {}
+      FieldReadExpression(std::shared_ptr<ASTExpression> obj, std::string field): _obj(obj), _field(field) {}
       std::string toString() {
          return std::string("{\"type\":\"FieldReadExpression\",\"obj\":") + _obj->toString() +
             std::string(",\"field\":\"") + _field + std::string("\"}");
@@ -118,7 +119,7 @@ class AssignmentStatement : public ASTStatement
       std::string _variable;
       std::shared_ptr<ASTExpression> _val;
    public:
-      AssignmentStatement(std::string variable, ASTExpression * val): _variable(variable), _val(val) {}
+      AssignmentStatement(std::string variable, std::shared_ptr<ASTExpression> val): _variable(variable), _val(val) {}
       std::string toString() {
          return std::string("{\"type\":\"AssignmentStatement\",\"variable\":\"") + _variable +
             std::string("\",\"val\":") + _val->toString() + std::string("}");
@@ -130,7 +131,7 @@ class DontCareAssignmentStatement : public ASTStatement
    private:
       std::shared_ptr<ASTExpression> _val;
    public:
-      DontCareAssignmentStatement(ASTExpression * val): _val(val) {}
+      DontCareAssignmentStatement(std::shared_ptr<ASTExpression> val): _val(val) {}
       std::string toString() {
          return std::string("{\"type\":\"DontCareAssignmentStatement\",\"val\":") + _val->toString() +
             std::string("}");
@@ -144,7 +145,7 @@ class FieldUpdateStatement : public ASTStatement
       std::string _field;
       std::shared_ptr<ASTExpression> _val;
    public:
-      FieldUpdateStatement(ASTExpression * obj, std::string field, ASTExpression * val): _obj(obj), _field(field), _val(val) {}
+      FieldUpdateStatement(std::shared_ptr<ASTExpression> obj, std::string field, std::shared_ptr<ASTExpression> val): _obj(obj), _field(field), _val(val) {}
       std::string toString() {
          return std::string("{\"type\":\"FieldUpdateStatement\",\"obj\":") + _obj->toString() +
             std::string(",\"field\":\"") + _field + std::string("\",\"val\":") + _val->toString() +
@@ -159,7 +160,7 @@ class IfElseStatement : public ASTStatement
       std::vector<std::shared_ptr<ASTStatement>> _if_statements;
       std::vector<std::shared_ptr<ASTStatement>> _else_statements;
    public:
-      IfElseStatement(ASTExpression * cond, std::vector<std::shared_ptr<ASTStatement>> if_statements, std::vector<std::shared_ptr<ASTStatement>> else_statements): _cond(cond), _if_statements(if_statements), _else_statements(else_statements) {}
+      IfElseStatement(std::shared_ptr<ASTExpression> cond, std::vector<std::shared_ptr<ASTStatement>> if_statements, std::vector<std::shared_ptr<ASTStatement>> else_statements): _cond(cond), _if_statements(if_statements), _else_statements(else_statements) {}
       std::string toString() {
          std::string out = std::string("{\"type\":\"IfElseStatement\",\"cond\":") + _cond->toString() +
             std::string(",\"if_statements\":[");
@@ -191,7 +192,7 @@ class IfOnlyStatement : public ASTStatement
       std::shared_ptr<ASTExpression> _cond;
       std::vector<std::shared_ptr<ASTStatement>> _statements;
    public:
-      IfOnlyStatement(ASTExpression * cond, std::vector<std::shared_ptr<ASTStatement>> statements): _cond(cond), _statements(statements) {}
+      IfOnlyStatement(std::shared_ptr<ASTExpression> cond, std::vector<std::shared_ptr<ASTStatement>> statements): _cond(cond), _statements(statements) {}
       std::string toString() {
          std::string out = std::string("{\"type\":\"IfOnlyStatement\",\"cond\":") + _cond->toString() +
             std::string(",\"statements\":[");
@@ -214,7 +215,7 @@ class WhileStatement : public ASTStatement
       std::shared_ptr<ASTExpression> _cond;
       std::vector<std::shared_ptr<ASTStatement>> _statements;
    public:
-      WhileStatement(ASTExpression * cond, std::vector<std::shared_ptr<ASTStatement>> statements): _cond(cond), _statements(statements) {}
+      WhileStatement(std::shared_ptr<ASTExpression> cond, std::vector<std::shared_ptr<ASTStatement>> statements): _cond(cond), _statements(statements) {}
       std::string toString() {
          std::string out = std::string("{\"type\":\"WhileStatement\",\"cond\":") + _cond->toString() +
             std::string(",\"statements\":[");
@@ -236,7 +237,7 @@ class ReturnStatement : public ASTStatement
    private:
       std::shared_ptr<ASTExpression> _val;
    public:
-      ReturnStatement(ASTExpression * val): _val(val) {}
+      ReturnStatement(std::shared_ptr<ASTExpression> val): _val(val) {}
       std::string toString() {
          return std::string("{\"type\":\"ReturnStatement\",\"val\":") + _val->toString() +
             std::string("}");
@@ -248,7 +249,7 @@ class PrintStatement : public ASTStatement
    private:
       std::shared_ptr<ASTExpression> _val;
    public:
-      PrintStatement(ASTExpression * val): _val(val) {}
+      PrintStatement(std::shared_ptr<ASTExpression> val): _val(val) {}
       std::string toString() {
          return std::string("{\"type\":\"PrintStatement\",\"val\":") + _val->toString() +
             std::string("}");
