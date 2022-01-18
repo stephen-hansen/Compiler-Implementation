@@ -6,10 +6,16 @@
 
 #define MAXARGS 6
 
+// Forward declare CFGBuilder, BasicBlock
+class CFGBuilder;
+class BasicBlock;
+
 class ASTNode
 {
    public:
       virtual std::string toString() = 0;
+      // BasicBlock returns the LAST block associated with toCFG
+      virtual std::shared_ptr<BasicBlock> toCFG(std::shared_ptr<BasicBlock> parent, CFGBuilder * ctxt) = 0;
 };
 
 class ASTExpression : public ASTNode
@@ -373,6 +379,7 @@ class ProgramDeclaration : public ASTNode
          out += std::string("]}");
          return out;
       }
+      std::shared_ptr<BasicBlock> toCFG(std::shared_ptr<BasicBlock> parent, CFGBuilder * ctxt);
 };
 
 #endif
