@@ -14,20 +14,29 @@ class CFGBuilderException : public std::exception
       std::string info() { return _info; }
 };
 
-class CFGBuilder
+// TODO define all visit methods
+
+class CFGBuilder : public ASTVisitor
 {
-   private:
-      size_t _temp_counter;
    public:
-      CFGBuilder(): _temp_counter(0) {}
-      size_t allocTemp() {
-         return _temp_counter++;
-      }
-      CFG * buildCFG(ProgramDeclaration * program) {
-         CFG * cfg = new CFG();
-         program->toCFG(cfg->getRoot(), this);
-         return cfg;
-      }
+      virtual void visit(UInt32Literal& node) = 0;
+      virtual void visit(VariableIdentifier& node) = 0;
+      virtual void visit(ArithmeticExpression& node) = 0;
+      virtual void visit(CallExpression& node) = 0;
+      virtual void visit(FieldReadExpression& node) = 0;
+      virtual void visit(NewObjectExpression& node) = 0;
+      virtual void visit(ThisObjectExpression& node) = 0;
+      virtual void visit(AssignmentStatement& node) = 0;
+      virtual void visit(DontCareAssignmentStatement& node) = 0;
+      virtual void visit(FieldUpdateStatement& node) = 0;
+      virtual void visit(IfElseStatement& node) = 0;
+      virtual void visit(IfOnlyStatement& node) = 0;
+      virtual void visit(WhileStatement& node) = 0;
+      virtual void visit(ReturnStatement& node) = 0;
+      virtual void visit(PrintStatement& node) = 0;
+      virtual void visit(MethodDeclaration& node) = 0;
+      virtual void visit(ClassDeclaration& node) = 0;
+      virtual void visit(ProgramDeclaration& node) = 0;
 };
 
 #endif

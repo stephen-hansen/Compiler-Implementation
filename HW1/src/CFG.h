@@ -37,15 +37,4 @@ class BasicBlock
       }
 };
 
-class CFG
-{
-   private:
-      std::shared_ptr<BasicBlock> _root_block;
-   public:
-      CFG(): _root_block(new BasicBlock) {}
-      std::shared_ptr<BasicBlock> getRoot() {
-         return _root_block;
-      }
-};
-
 #endif
