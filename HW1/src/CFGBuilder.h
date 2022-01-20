@@ -2,6 +2,7 @@
 #define _CS_441_CFGBUILDER_H
 #include <exception>
 #include <map>
+#include <stack>
 #include <string>
 #include "AST.h"
 #include "CFG.h"
@@ -15,32 +16,35 @@ class CFGBuilderException : public std::exception
       std::string info() { return _info; }
 };
 
-// TODO define all visit methods
-
 class CFGBuilder : public ASTVisitor
 {
    private:
       unsigned long _temp_counter = 0;
       std::map<std::string, unsigned long> _field_to_table_offset;
+      std::stack<std::string> _return_values;
+      std::stack<std::shared_ptr<BasicBlock>> _blocks;
+      std::string createTempVariable() {
+         return toRegister(std::to_string(_temp_counter++));
+      }
    public:
-      virtual void visit(UInt32Literal& node) = 0;
-      virtual void visit(VariableIdentifier& node) = 0;
-      virtual void visit(ArithmeticExpression& node) = 0;
-      virtual void visit(CallExpression& node) = 0;
-      virtual void visit(FieldReadExpression& node) = 0;
-      virtual void visit(NewObjectExpression& node) = 0;
-      virtual void visit(ThisObjectExpression& node) = 0;
-      virtual void visit(AssignmentStatement& node) = 0;
-      virtual void visit(DontCareAssignmentStatement& node) = 0;
-      virtual void visit(FieldUpdateStatement& node) = 0;
-      virtual void visit(IfElseStatement& node) = 0;
-      virtual void visit(IfOnlyStatement& node) = 0;
-      virtual void visit(WhileStatement& node) = 0;
-      virtual void visit(ReturnStatement& node) = 0;
-      virtual void visit(PrintStatement& node) = 0;
-      virtual void visit(MethodDeclaration& node) = 0;
-      virtual void visit(ClassDeclaration& node) = 0;
-      virtual void visit(ProgramDeclaration& node) = 0;
+      void visit(UInt32Literal& node);
+      void visit(VariableIdentifier& node);
+      void visit(ArithmeticExpression& node); 
+      void visit(CallExpression& node);
+      void visit(FieldReadExpression& node);
+      void visit(NewObjectExpression& node);
+      void visit(ThisObjectExpression& node);
+      void visit(AssignmentStatement& node);
+      void visit(DontCareAssignmentStatement& node);
+      void visit(FieldUpdateStatement& node);
+      void visit(IfElseStatement& node);
+      void visit(IfOnlyStatement& node);
+      void visit(WhileStatement& node);
+      void visit(ReturnStatement& node);
+      void visit(PrintStatement& node);
+      void visit(MethodDeclaration& node);
+      void visit(ClassDeclaration& node);
+      void visit(ProgramDeclaration& node);
 };
 
 #endif

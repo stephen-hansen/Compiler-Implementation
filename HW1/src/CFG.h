@@ -6,6 +6,10 @@
 #include <string>
 #include <vector>
 
+std::string toRegister(std::string name) {
+   return std::string("%") + name;
+}
+
 class IRStatement
 {
    public:

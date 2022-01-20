@@ -79,6 +79,7 @@ class UInt32Literal : public ASTExpression
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      uint32_t val() { return _val; }
 };
 
 class VariableIdentifier : public ASTExpression
@@ -93,6 +94,7 @@ class VariableIdentifier : public ASTExpression
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::string name() { return _name; }
 };
 
 class ArithmeticExpression : public ASTExpression
@@ -111,6 +113,9 @@ class ArithmeticExpression : public ASTExpression
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      char op() { return _op; }
+      std::shared_ptr<ASTExpression> e1() { return _e1; }
+      std::shared_ptr<ASTExpression> e2() { return _e2; }
 };
 
 class CallExpression : public ASTExpression
