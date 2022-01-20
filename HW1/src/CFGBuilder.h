@@ -1,6 +1,7 @@
 #ifndef _CS_441_CFGBUILDER_H
 #define _CS_441_CFGBUILDER_H
 #include <exception>
+#include <map>
 #include <string>
 #include "AST.h"
 #include "CFG.h"
@@ -18,6 +19,9 @@ class CFGBuilderException : public std::exception
 
 class CFGBuilder : public ASTVisitor
 {
+   private:
+      unsigned long _temp_counter = 0;
+      std::map<std::string, unsigned long> _field_to_table_offset;
    public:
       virtual void visit(UInt32Literal& node) = 0;
       virtual void visit(VariableIdentifier& node) = 0;
