@@ -10,6 +10,55 @@ std::string toRegister(std::string name) {
    return std::string("%") + name;
 }
 
+std::string toGlobal(std::string name) {
+   return std::string("@") + name;
+}
+
+std::string toVtable(std::string name) {
+   return std::string("vtbl") + name;
+}
+
+std::string toFieldMap(std::string name) {
+   return std::string("fields") + name;
+}
+
+bool isTemporary(std::string reg) {
+   bool alldigits = true;
+   for (size_t i=1; i<reg.length(); i++) {
+      if (!std::isdigit(reg[i])) {
+         alldigits = false;
+         break;
+      }
+   }
+   return reg[0] == '%' && alldigits;
+}
+
+bool isVariable(std::string reg) {
+   bool allalpha = true;
+   for (size_t i=1; i<reg.length(); i++) {
+      if (!std::isalpha(reg[i])) {
+         allalpha = false;
+         break;
+      }
+   }
+   return reg[0] == '%' && allalpha;
+}
+
+bool isNumber(std::string reg) {
+   bool alldigit = false;
+   for (size_t i=0; i<reg.length(); i++) {
+      if (!std::isalpha(reg[i])) {
+         alldigit = false;
+         break;
+      }
+   }
+   return alldigit;
+}
+
+bool isGlobal(std::string reg) {
+   return reg[0] == '@';
+}
+
 class IRStatement
 {
    public:
@@ -189,12 +238,12 @@ class StorePrimitive : public PrimitiveStatement
 #define NO_SUCH_FIELD "NoSuchField"
 #define NO_SUCH_METHOD "NoSuchMethod"
 
-class FailPrimitive : public PrimitiveStatement
+class FailControl : public ControlStatement
 {
    private:
       std::string _message;
    public:
-      FailPrimitive(std::string message): _message(message) {}
+      FailControl(std::string message): _message(message) {}
       std::string toString() override {
          return "fail " + _message;
       }
@@ -310,9 +359,6 @@ class ClassCFG
 {
    private:
       std::string _name;
-      std::string _vtbl_name;
-      std::string _fields_name;
-      unsigned long _alloc_size;
       std::vector<std::shared_ptr<MethodCFG>> _methods;
       std::vector<std::string> _vtable;
       std::vector<unsigned long> _field_table;
@@ -320,7 +366,7 @@ class ClassCFG
       std::string dataString() {
          std::stringstream buf;
          // Write vtbl
-         buf << "global array " << _vtbl_name << ": { ";
+         buf << "global array " << toVtable(_name) << ": { ";
          int i = 0;
          for (auto & m : _vtable) {
             if (i > 0) {
@@ -331,7 +377,7 @@ class ClassCFG
          }
          buf << " }\n";
          // Write fields
-         buf << "global array " << _fields_name << ": { ";
+         buf << "global array " << toFieldMap(_name) << ": { ";
          i = 0;
          for (auto & f : _field_table) {
             if (i > 0) {

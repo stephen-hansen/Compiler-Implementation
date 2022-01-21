@@ -143,6 +143,9 @@ class CallExpression : public ASTExpression
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> obj() { return _obj; }
+      std::string method() { return _method; }
+      std::vector<std::shared_ptr<ASTExpression>> params() { return _params; }
 };
 
 class FieldReadExpression : public ASTExpression
@@ -159,6 +162,8 @@ class FieldReadExpression : public ASTExpression
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> obj() { return _obj; }
+      std::string field() { return _field; }
 };
 
 class NewObjectExpression : public ASTExpression
@@ -174,6 +179,7 @@ class NewObjectExpression : public ASTExpression
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::string class_name() { return _class_name; }
 };
 
 class ThisObjectExpression : public ASTExpression
@@ -201,6 +207,8 @@ class AssignmentStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::string variable() { return _variable; }
+      std::shared_ptr<ASTExpression> val() { return _val; }
 };
 
 class DontCareAssignmentStatement : public ASTStatement
@@ -216,6 +224,7 @@ class DontCareAssignmentStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> val() { return _val; }
 };
 
 class FieldUpdateStatement : public ASTStatement
@@ -337,6 +346,7 @@ class ReturnStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> val() { return _val; }
 };
 
 class PrintStatement : public ASTStatement
@@ -352,6 +362,7 @@ class PrintStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> val() { return _val; }
 };
 
 class MethodDeclaration : public ASTNode

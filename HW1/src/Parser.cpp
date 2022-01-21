@@ -337,6 +337,9 @@ std::shared_ptr<ASTStatement> ProgramParser::parseStmt(std::istream & input) {
    } else if (keyword == "return") {
       std::shared_ptr<ASTExpression> e = parseExpr(input);
       return std::make_shared<ReturnStatement>(e);
+   } else if (keyword == "print") {
+      std::shared_ptr<ASTExpression> e = parseExpr(input);
+      return std::make_shared<PrintStatement>(e);
    }
    throw ParserException(std::string("Found statement starting with \"" + keyword + "\" which is not a valid keyword"));
 }
