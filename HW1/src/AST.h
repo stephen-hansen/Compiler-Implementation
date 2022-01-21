@@ -243,6 +243,9 @@ class FieldUpdateStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> obj() { return _obj; }
+      std::string field() { return _field; }
+      std::shared_ptr<ASTExpression> val() { return _val; }
 };
 
 class IfElseStatement : public ASTStatement
@@ -279,6 +282,9 @@ class IfElseStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> cond() { return _cond; }
+      std::vector<std::shared_ptr<ASTStatement>> if_statements() { return _if_statements; }
+      std::vector<std::shared_ptr<ASTStatement>> else_statements() { return _else_statements; }
 };
 
 class IfOnlyStatement : public ASTStatement
@@ -305,6 +311,8 @@ class IfOnlyStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> cond() { return _cond; }
+      std::vector<std::shared_ptr<ASTStatement>> statements() { return _statements; }
 };
 
 class WhileStatement : public ASTStatement
@@ -331,6 +339,8 @@ class WhileStatement : public ASTStatement
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::shared_ptr<ASTExpression> cond() { return _cond; }
+      std::vector<std::shared_ptr<ASTStatement>> statements() { return _statements; }
 };
 
 class ReturnStatement : public ASTStatement
@@ -410,6 +420,10 @@ class MethodDeclaration : public ASTNode
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::string name() { return _name; }
+      std::vector<std::string> params() { return _params; }
+      std::vector<std::string> locals() { return _locals; }
+      std::vector<std::shared_ptr<ASTStatement>> statements() { return _statements; }
 };
 
 class ClassDeclaration : public ASTNode
@@ -447,6 +461,9 @@ class ClassDeclaration : public ASTNode
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::string name() { return _name; }
+      std::vector<std::string> fields() { return _fields; }
+      std::vector<std::shared_ptr<MethodDeclaration>> methods() { return _methods; }
 };
 
 class ProgramDeclaration : public ASTNode
@@ -492,6 +509,9 @@ class ProgramDeclaration : public ASTNode
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+      std::vector<std::shared_ptr<ClassDeclaration>> classes() { return _classes; }
+      std::vector<std::string> main_locals() { return _main_locals; }
+      std::vector<std::shared_ptr<ASTStatement>> main_statements() { return _main_statements; }
 };
 
 #endif

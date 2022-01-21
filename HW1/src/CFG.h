@@ -22,6 +22,10 @@ std::string toFieldMap(std::string name) {
    return std::string("fields") + name;
 }
 
+std::string toMethodName(std::string class_name, std::string method_name) {
+   return method_name + class_name;
+}
+
 bool isTemporary(std::string reg) {
    bool alldigits = true;
    for (size_t i=1; i<reg.length(); i++) {
@@ -298,6 +302,7 @@ class BasicBlock
       std::vector<std::weak_ptr<BasicBlock>> _weak_children;
    public:
       BasicBlock(std::string label): _label(label) {}
+      BasicBlock(std::string label, std::vector<std::string> params): _label(label), _params(params) {}
       void appendPrimitive(std::shared_ptr<PrimitiveStatement> ps) {
          _primitives.push_back(ps);
       }
@@ -350,6 +355,7 @@ class MethodCFG
    private:
       std::shared_ptr<BasicBlock> _first_block;
    public:
+      MethodCFG(std::shared_ptr<BasicBlock> first_block): _first_block(first_block) {}
       std::string toString() {
          return _first_block->toStringRecursive();
       }
@@ -397,6 +403,10 @@ class ClassCFG
          }
          return buf.str();
       }
+      std::string name() { return _name; }
+      void appendMethod(std::shared_ptr<MethodCFG> m) {
+         _methods.push_back(m);
+      }
 };
 
 class ProgramCFG
@@ -405,6 +415,7 @@ class ProgramCFG
       std::shared_ptr<MethodCFG> _main_method;
       std::map<std::string, std::shared_ptr<ClassCFG>> _classes;
    public:
+      ProgramCFG(std::shared_ptr<MethodCFG> main_method): _main_method(main_method) {}
       std::string toString() {
          std::stringstream buf;
          // Write data (vtbl, fields)
