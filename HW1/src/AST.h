@@ -3,6 +3,7 @@
 #include <iostream>
 #include <memory>
 #include <string>
+#include <sstream>
 #include <vector>
 
 #define MAXARGS 6
@@ -18,10 +19,16 @@ class ASTNode
 };
 
 class ASTExpression : public ASTNode
-{};
+{
+   public:
+      virtual std::string toSourceString() = 0;
+};
 
 class ASTStatement : public ASTNode
-{};
+{
+   public:
+      virtual std::string toSourceString() = 0;
+};
 
 // Forward declare all specific nodes here
 class UInt32Literal;
@@ -76,6 +83,9 @@ class UInt32Literal : public ASTExpression
       std::string toString() override {
          return std::string("{\"type\":\"UInt32Literal\",\"val\":\"") + std::to_string(_val) + std::string("\"}");
       }
+      std::string toSourceString() override {
+         return std::to_string(_val);
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -90,6 +100,9 @@ class VariableIdentifier : public ASTExpression
       VariableIdentifier(std::string name): _name(name) {}
       std::string toString() override {
          return std::string("{\"type\":\"VariableIdentifier\",\"name\":\"") + _name + std::string("\"}");
+      }
+      std::string toSourceString() override {
+         return _name; 
       }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
@@ -109,6 +122,9 @@ class ArithmeticExpression : public ASTExpression
          return std::string("{\"type\":\"ArithmeticExpression\",\"op\":\"") + std::string(1,_op) +
             std::string("\",\"e1\":") + _e1->toString() + std::string(",\"e2\":") + _e2->toString() +
             std::string("}");
+      }
+      std::string toSourceString() override {
+         return std::string("(") + _e1->toSourceString() + " " + _op + " " + _e2->toSourceString() + ")";
       }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
@@ -140,6 +156,22 @@ class CallExpression : public ASTExpression
          out += std::string("]}");
          return out;
       }
+      std::string toSourceString() override {
+         std::stringstream buf;
+         buf << "^" << _obj->toSourceString();
+         buf << "." << _method;
+         buf << "(";
+         int i = 0;
+         for (auto & p : _params) {
+            if (i > 0) {
+               buf << ",";
+            }
+            buf << p->toSourceString();
+            i++;
+         }
+         buf << ")";
+         return buf.str();
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -159,6 +191,9 @@ class FieldReadExpression : public ASTExpression
          return std::string("{\"type\":\"FieldReadExpression\",\"obj\":") + _obj->toString() +
             std::string(",\"field\":\"") + _field + std::string("\"}");
       }
+      std::string toSourceString() override {
+         return std::string("&") + _obj->toSourceString() + "." + _field;
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -176,6 +211,9 @@ class NewObjectExpression : public ASTExpression
          return std::string("{\"type\":\"NewObjectExpression\",\"class_name\":\"") + _class_name +
             std::string("\"}");
       }
+      std::string toSourceString() override {
+         return std::string("@") + _class_name;
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -187,6 +225,9 @@ class ThisObjectExpression : public ASTExpression
    public:
       std::string toString() override {
          return std::string("{\"type\":\"ThisObjectExpression\"}");
+      }
+      std::string toSourceString() override {
+         return "this";
       }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
@@ -204,6 +245,9 @@ class AssignmentStatement : public ASTStatement
          return std::string("{\"type\":\"AssignmentStatement\",\"variable\":\"") + _variable +
             std::string("\",\"val\":") + _val->toString() + std::string("}");
       }
+      std::string toSourceString() override {
+         return _variable + " = " + _val->toSourceString();
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -220,6 +264,9 @@ class DontCareAssignmentStatement : public ASTStatement
       std::string toString() override {
          return std::string("{\"type\":\"DontCareAssignmentStatement\",\"val\":") + _val->toString() +
             std::string("}");
+      }
+      std::string toSourceString() override {
+         return "_ = " + _val->toSourceString();
       }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
@@ -239,6 +286,10 @@ class FieldUpdateStatement : public ASTStatement
          return std::string("{\"type\":\"FieldUpdateStatement\",\"obj\":") + _obj->toString() +
             std::string(",\"field\":\"") + _field + std::string("\",\"val\":") + _val->toString() +
             std::string("}");
+      }
+      std::string toSourceString() override {
+         return std::string("!") + _obj->toSourceString() + "." + _field +
+            " = " + _val->toSourceString();
       }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
@@ -279,6 +330,9 @@ class IfElseStatement : public ASTStatement
          out += std::string("]}");
          return out;
       }
+      std::string toSourceString() override {
+         return std::string("if ") + _cond->toSourceString() + ": { ... } else { ... }";
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -308,6 +362,9 @@ class IfOnlyStatement : public ASTStatement
          out += std::string("]}");
          return out;
       }
+      std::string toSourceString() override {
+         return std::string("ifonly ") + _cond->toSourceString() + ": { ... }";
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -336,6 +393,9 @@ class WhileStatement : public ASTStatement
          out += std::string("]}");
          return out;
       }
+      std::string toSourceString() override {
+         return std::string("while ") + _cond->toSourceString() + ": { ... }";
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -353,6 +413,9 @@ class ReturnStatement : public ASTStatement
          return std::string("{\"type\":\"ReturnStatement\",\"val\":") + _val->toString() +
             std::string("}");
       }
+      std::string toSourceString() override {
+         return std::string("return ") + _val->toSourceString();
+      }
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
@@ -368,6 +431,9 @@ class PrintStatement : public ASTStatement
       std::string toString() override {
          return std::string("{\"type\":\"PrintStatement\",\"val\":") + _val->toString() +
             std::string("}");
+      }
+      std::string toSourceString() override {
+         return std::string("print ") + _val->toSourceString();
       }
       void accept(ASTVisitor& v) override {
          v.visit(*this);

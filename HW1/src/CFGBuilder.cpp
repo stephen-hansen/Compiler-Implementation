@@ -168,6 +168,7 @@ void CFGBuilder::visit(ThisObjectExpression& node) {
 }
 
 void CFGBuilder::visit(AssignmentStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    std::string destRegister = toRegister(node.variable());
    // Set destRegister as input value
    _input_values.push(destRegister);
@@ -185,6 +186,7 @@ void CFGBuilder::visit(AssignmentStatement& node) {
 }
 
 void CFGBuilder::visit(DontCareAssignmentStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // This is like an assignment statement but we're not pushing a dest register
    // And don't need to make an assignment primitive either
    // Still need a dest though for most statements, so push TEMP up
@@ -195,6 +197,7 @@ void CFGBuilder::visit(DontCareAssignmentStatement& node) {
 }
 
 void CFGBuilder::visit(FieldUpdateStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit obj
    _input_values.push(TEMP);
    node.obj()->accept(*this);
@@ -230,6 +233,7 @@ void CFGBuilder::visit(FieldUpdateStatement& node) {
 }
 
 void CFGBuilder::visit(IfElseStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit cond
    _input_values.push(TEMP);
    node.cond()->accept(*this);
@@ -275,6 +279,7 @@ void CFGBuilder::visit(IfElseStatement& node) {
 }
 
 void CFGBuilder::visit(IfOnlyStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit cond
    _input_values.push(TEMP);
    node.cond()->accept(*this);
@@ -307,6 +312,7 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
 }
 
 void CFGBuilder::visit(WhileStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // End current block by jumping to conditional block
    std::string condLabel = createLabel();
    std::shared_ptr<BasicBlock> cond_block = std::make_shared<BasicBlock>(condLabel);
@@ -346,6 +352,7 @@ void CFGBuilder::visit(WhileStatement& node) {
 }
 
 void CFGBuilder::visit(ReturnStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit val, get register to return
    _input_values.push(TEMP);
    node.val()->accept(*this);
@@ -356,6 +363,7 @@ void CFGBuilder::visit(ReturnStatement& node) {
 }
 
 void CFGBuilder::visit(PrintStatement& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit val, get register to print
    _input_values.push(TEMP);
    node.val()->accept(*this);

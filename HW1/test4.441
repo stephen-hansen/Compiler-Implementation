@@ -8,8 +8,10 @@ main with x, y, z:
 while x: {
    x = (y + 1)
    y = (2 * z)
-   ifonly y: {
+   if y: {
       x = (y + z)
+   } else {
+      x = 2
    }
    z = 1
 }
