@@ -10,4 +10,6 @@ class B [
 ]
 
 main with x:
-x = (((@A + @B) + (@A + @B)) + ((@A + @B) + (@A + @B)))
+x = @A
+!x.x = 3
+print(^x.m())

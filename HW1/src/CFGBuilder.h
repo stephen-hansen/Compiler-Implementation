@@ -78,32 +78,36 @@ class CFGBuilder : public ASTVisitor
          std::string failureBlockLabel = createName(failLabel);
          std::shared_ptr<BasicBlock> failureBlock = std::make_shared<BasicBlock>(failureBlockLabel);
          failureBlock->setControl(std::make_shared<FailControl>(failMsg));
-         // Curr block owns failure block
-         _curr_block->addNewChild(failureBlock);
          // Build success block
          std::string nextBlockLabel = createLabel();
          std::shared_ptr<BasicBlock> successBlock = std::make_shared<BasicBlock>(nextBlockLabel);
-         // Curr block owns success block
-         _curr_block->addNewChild(successBlock);
          if (expectedTag) {
+            // True is nextBlock, False is failureBlock
+            std::swap(failureBlock, successBlock);
             std::swap(failureBlockLabel, nextBlockLabel);
-         }
+         } 
+         // curr block owns success and failure
+         _curr_block->addNewChild(failureBlock);
+         _curr_block->addNewChild(successBlock);
          _curr_block->setControl(std::make_shared<IfElseControl>(check, failureBlockLabel, nextBlockLabel));
          // Remove current block and replace with success block
+         if (expectedTag) {
+            std::swap(failureBlock, successBlock);
+         }
          _curr_block = successBlock;
       }
       void nonzeroCheck(std::string reg, std::string failLabel, std::string failMsg) {
          // Build failure block
          std::string failureBlockLabel = createName(failLabel);
          std::shared_ptr<BasicBlock> failureBlock = std::make_shared<BasicBlock>(failureBlockLabel);
-         failureBlock->setControl(std::make_shared<FailControl>(failMsg));
-         // Curr block owns failure block
-         _curr_block->addNewChild(failureBlock);
+         failureBlock->setControl(std::make_shared<FailControl>(failMsg)); 
          // Build success block
          std::string nextBlockLabel = createLabel();
          std::shared_ptr<BasicBlock> successBlock = std::make_shared<BasicBlock>(nextBlockLabel);
          // Curr block owns success block
          _curr_block->addNewChild(successBlock);
+         // Curr block owns failure block
+         _curr_block->addNewChild(failureBlock);
          _curr_block->setControl(std::make_shared<IfElseControl>(reg, nextBlockLabel, failureBlockLabel));
          // Remove current block and replace with success block
          _curr_block = successBlock;

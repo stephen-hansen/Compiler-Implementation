@@ -6,27 +6,31 @@
 #include <string>
 #include <vector>
 
-std::string toRegister(std::string name) {
+inline unsigned int tag(unsigned int val) {
+   return (val << 1) + 1;
+}
+
+inline std::string toRegister(std::string name) {
    return std::string("%") + name;
 }
 
-std::string toGlobal(std::string name) {
+inline std::string toGlobal(std::string name) {
    return std::string("@") + name;
 }
 
-std::string toVtable(std::string name) {
+inline std::string toVtable(std::string name) {
    return std::string("vtbl") + name;
 }
 
-std::string toFieldMap(std::string name) {
+inline std::string toFieldMap(std::string name) {
    return std::string("fields") + name;
 }
 
-std::string toMethodName(std::string class_name, std::string method_name) {
+inline std::string toMethodName(std::string class_name, std::string method_name) {
    return method_name + class_name;
 }
 
-bool isTemporary(std::string reg) {
+inline bool isTemporary(std::string reg) {
    bool alldigits = true;
    for (size_t i=1; i<reg.length(); i++) {
       if (!std::isdigit(reg[i])) {
@@ -37,7 +41,7 @@ bool isTemporary(std::string reg) {
    return reg[0] == '%' && alldigits;
 }
 
-bool isVariable(std::string reg) {
+inline bool isVariable(std::string reg) {
    bool allalpha = true;
    for (size_t i=1; i<reg.length(); i++) {
       if (!std::isalpha(reg[i])) {
@@ -48,7 +52,7 @@ bool isVariable(std::string reg) {
    return reg[0] == '%' && allalpha;
 }
 
-bool isNumber(std::string reg) {
+inline bool isNumber(std::string reg) {
    bool alldigit = false;
    for (size_t i=0; i<reg.length(); i++) {
       if (!std::isalpha(reg[i])) {
@@ -59,7 +63,7 @@ bool isNumber(std::string reg) {
    return alldigit;
 }
 
-bool isGlobal(std::string reg) {
+inline bool isGlobal(std::string reg) {
    return reg[0] == '@';
 }
 
@@ -338,6 +342,7 @@ class BasicBlock
          for (auto & p : _primitives) {
             buf << "  " << p->toString() << "\n";
          }
+         buf << "  " << _control->toString() << "\n";
          return buf.str();
       }
       std::string toStringRecursive() {
@@ -369,6 +374,10 @@ class ClassCFG
       std::vector<std::string> _vtable;
       std::vector<unsigned long> _field_table;
    public:
+      ClassCFG(std::string name, std::vector<std::string> vtable, std::vector<unsigned long> field_table):
+         _name(name),
+         _vtable(vtable),
+         _field_table(field_table) {}
       std::string dataString() {
          std::stringstream buf;
          // Write vtbl
@@ -433,6 +442,9 @@ class ProgramCFG
          // Write main method
          buf << _main_method->toString();
          return buf.str();
+      }
+      void appendClass(std::shared_ptr<ClassCFG> c) {
+         _classes[c->name()] = c;
       }
 };
 

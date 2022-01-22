@@ -6,7 +6,7 @@ void CFGBuilder::visit(UInt32Literal& node) {
    // Don't care about input value
    _input_values.pop();
    // Send (tagged) int back as value
-   _return_values.push(std::make_pair(std::to_string((node.val() << 1) + 1), INTEGER));
+   _return_values.push(std::make_pair(std::to_string(tag(node.val())), INTEGER));
 }
 
 void CFGBuilder::visit(VariableIdentifier& node) {
@@ -388,7 +388,7 @@ void CFGBuilder::visit(MethodDeclaration& node) {
    _curr_block = entry_block;
    // Initialize every local to 0 (0 << 1 + 1 => 1 as tagged)
    for (auto & l : node.locals()) {
-      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l), "1"));
+      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l), std::to_string(tag(0))));
    }
    // Recursively visit statements and build
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
@@ -401,8 +401,33 @@ void CFGBuilder::visit(MethodDeclaration& node) {
 
 void CFGBuilder::visit(ClassDeclaration& node) {
    // Construct the vtable
-   for 
+   std::vector<std::shared_ptr<MethodDeclaration>> methods = node.methods();
+   std::vector<std::string> vtable;
+   vtable.resize(_method_to_vtable_offset.size());
+   std::fill(vtable.begin(), vtable.end(), std::string("0"));
+   for (auto & m : methods) {
+      int loc = _method_to_vtable_offset[m->name()];
+      std::string methodname = toMethodName(node.name(), m->name());
+      vtable[loc] = methodname;
+   }
    // Construct the fields map
+   std::vector<std::string> fields = node.fields();
+   std::vector<unsigned long> fieldsMap;
+   fieldsMap.resize(_field_to_map_offset.size());
+   std::fill(fieldsMap.begin(), fieldsMap.end(), 0);
+   int index = 2;
+   for (auto & f : fields) {
+      int loc = _field_to_map_offset[f];
+      unsigned long offset = index++;
+      fieldsMap[loc] = offset;
+   }
+   _curr_class = std::make_shared<ClassCFG>(node.name(), vtable, fieldsMap);
+   // Build all methods
+   for (auto & m : methods) {
+      m->accept(*this);
+   }
+   // Add clsas to program
+   _curr_program->appendClass(_curr_class);
 }
 
 void CFGBuilder::visit(ProgramDeclaration& node) {
@@ -432,22 +457,24 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    } 
    // Build main method
    std::shared_ptr<BasicBlock> main_block = std::make_shared<BasicBlock>("main");
+   _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block));
+   // Build every class
+   for (auto & c : classes) {
+      c->accept(*this);
+   }
    _curr_block = main_block;
    // Initialize every local to 0 (0 << 1 + 1 => 1 as tagged)
    for (auto & l : node.main_locals()) {
-      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l), "1"));
+      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l), std::to_string(tag(0))));
    }
    // Recursively visit statements and build
    std::vector<std::shared_ptr<ASTStatement>> statements = node.main_statements();
    for (auto & s : statements) {
       s->accept(*this);
    }
+   // End main with ret 0 (0 << 1 + 1 => 1 as tagged)
+   _curr_block->setControl(std::make_shared<RetControl>(std::to_string(tag(0))));
    // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
-   _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block));
-   // Build every class
-   for (auto & c : classes) {
-      c->accept(*this);
-   }
 }
 
 std::shared_ptr<ProgramCFG> CFGBuilder::build(std::shared_ptr<ProgramDeclaration> p) {

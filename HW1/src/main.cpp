@@ -1,4 +1,5 @@
 #include <iostream>
+#include "CFGBuilder.h"
 #include "Parser.h"
 
 int main(int argc, char ** argv) {
@@ -14,12 +15,15 @@ int main(int argc, char ** argv) {
       }
    }
    ProgramParser parser;
+   CFGBuilder builder;
    try {
-      std::shared_ptr<ProgramDeclaration> p = std::shared_ptr<ProgramDeclaration>(parser.parse(std::cin));
+      std::shared_ptr<ProgramDeclaration> progAST = parser.parse(std::cin);
       if (printAST) {
-         std::cout << p->toString() << std::endl;
+         std::cout << progAST->toString() << std::endl;
          return 0;
       }
+      std::shared_ptr<ProgramCFG> progCFG = builder.build(progAST);
+      std::cout << progCFG->toString() << std::endl;
    } catch (ParserException & p) {
       std::cerr << "Parser error:" << std::endl;
       std::cerr << p.info() << std::endl;
