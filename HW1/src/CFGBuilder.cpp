@@ -472,8 +472,8 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    for (auto & s : statements) {
       s->accept(*this);
    }
-   // End main with ret 0 (0 << 1 + 1 => 1 as tagged)
-   _curr_block->setControl(std::make_shared<RetControl>(std::to_string(tag(0))));
+   // End main with ret 0
+   _curr_block->setControl(std::make_shared<RetControl>(std::to_string(0)));
    // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
 }
 
