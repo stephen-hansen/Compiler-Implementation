@@ -264,15 +264,7 @@ void CFGBuilder::visit(IfElseStatement& node) {
       }
       s->accept(*this);
    }
-   // Create final block
-   std::string finalLabel = createLabel();
-   std::shared_ptr<BasicBlock> final_block = std::make_shared<BasicBlock>(finalLabel);
-   if (!_curr_block->isUnreachable()) {
-      // Current block points to but does not own final block
-      _curr_block->addExistingChild(final_block);
-      // End current block with jump to final block
-      _curr_block->setControl(std::make_shared<JumpControl>(finalLabel));
-   }
+   std::shared_ptr<BasicBlock> last_true_block = _curr_block;
    // Recursively build false block, push to current scope
    _curr_block = false_block;
    std::vector<std::shared_ptr<ASTStatement>> else_statements = node.else_statements();
@@ -282,14 +274,32 @@ void CFGBuilder::visit(IfElseStatement& node) {
       }
       s->accept(*this);
    }
-   if (!_curr_block->isUnreachable()) {
-      // False block points to and owns final block
-      _curr_block->addNewChild(final_block);
+   std::shared_ptr<BasicBlock> last_false_block = _curr_block; 
+   // Create final block
+   std::string finalLabel = createLabel();
+   std::shared_ptr<BasicBlock> final_block = std::make_shared<BasicBlock>(finalLabel);
+   bool final_block_is_owned = false;
+   if (!last_false_block->isUnreachable()) {
+      last_false_block->addNewChild(final_block);
+      final_block_is_owned = true;
+      last_false_block->setControl(std::make_shared<JumpControl>(finalLabel));
+   }
+   if (!last_true_block->isUnreachable()) {
+      if (!final_block_is_owned) {
+         last_true_block->addNewChild(final_block);
+         final_block_is_owned = true;
+      } else {
+         last_true_block->addExistingChild(final_block);
+      }
       // End current block with jump to final block
-      _curr_block->setControl(std::make_shared<JumpControl>(finalLabel));
+      last_true_block->setControl(std::make_shared<JumpControl>(finalLabel));
    }
    // Update current block to final block
    _curr_block = final_block;
+   if (!final_block_is_owned) {
+      // Both if and else return so anything after is unreachable
+      _curr_block->setUnreachable(true);
+   }
 }
 
 void CFGBuilder::visit(IfOnlyStatement& node) {

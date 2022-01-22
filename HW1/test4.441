@@ -17,6 +17,16 @@ if z: {
       x = (x + 1)
    }
 }
+if 0: {
+   return 3
+} else {
+   y = (y + 1)
+}
+if 1: {
+   z = (z - 1)
+} else {
+   return 2
+}
 if x: {
    return x
 } else {
