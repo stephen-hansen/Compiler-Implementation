@@ -457,6 +457,7 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    } 
    // Build main method
    std::shared_ptr<BasicBlock> main_block = std::make_shared<BasicBlock>("main");
+   // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
    _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block));
    // Build every class
    for (auto & c : classes) {
@@ -472,9 +473,7 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    for (auto & s : statements) {
       s->accept(*this);
    }
-   // End main with ret 0
-   _curr_block->setControl(std::make_shared<RetControl>(std::to_string(0)));
-   // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
+   // Main will end with ret 0 due to default control value 
 }
 
 std::shared_ptr<ProgramCFG> CFGBuilder::build(std::shared_ptr<ProgramDeclaration> p) {

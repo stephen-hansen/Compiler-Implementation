@@ -1,0 +1,17 @@
+class FOO [
+   fields a, b, c, d;
+   method m1(x, y, z) with locals p, q:
+      !this.a = x
+]
+
+main with x, y, z:
+while x: {
+   x = (y + 1)
+   y = (2 * z)
+   ifonly y: {
+      x = (y + z)
+   }
+   z = 1
+}
+z = x
+

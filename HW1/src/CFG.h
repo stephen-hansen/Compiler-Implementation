@@ -301,7 +301,7 @@ class BasicBlock
       std::string _label;
       std::vector<std::string> _params;
       std::vector<std::shared_ptr<PrimitiveStatement>> _primitives;
-      std::shared_ptr<ControlStatement> _control;
+      std::shared_ptr<ControlStatement> _control = std::make_shared<RetControl>("0");
       std::vector<std::shared_ptr<BasicBlock>> _children;
       std::vector<std::weak_ptr<BasicBlock>> _weak_children;
    public:
