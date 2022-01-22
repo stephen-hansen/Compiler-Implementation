@@ -1,0 +1,6 @@
+main with cnt:
+cnt = 10
+while cnt: {
+   print cnt
+   cnt = (cnt - 1)
+}

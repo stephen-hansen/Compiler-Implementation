@@ -1,0 +1,28 @@
+data:
+code:
+
+main:
+  %x = 1
+  %y = 1
+  %y = 11
+  %1 = %y & 1
+  if %1 then l1 else badnumber1
+l1:
+  %2 = %y / 2
+  %3 = 7 / 2
+  %4 = %2 * %3
+  %5 = %4 * 2
+  %6 = %5 + 1
+  %7 = %y & 1
+  if %7 then l2 else badnumber2
+l2:
+  %8 = %y - 5
+  %9 = %8 + 1
+  %10 = %9 & 18446744073709551614
+  %x = %6 + %10
+  ret 1
+badnumber2:
+  fail NotANumber
+badnumber1:
+  fail NotANumber
+

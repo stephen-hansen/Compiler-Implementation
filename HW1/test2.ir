@@ -1,0 +1,28 @@
+data:
+code:
+
+main:
+  %cnt = 1
+  %cnt = 21
+  jump l1
+l1:
+  if %cnt then l2 else l3
+l2:
+  %1 = %cnt & 1
+  if %1 then l4 else badnumber1
+l4:
+  %2 = %cnt / 2
+  print(%2)
+  %3 = %cnt & 1
+  if %3 then l5 else badnumber2
+l5:
+  %4 = %cnt - 3
+  %cnt = %4 + 1
+  jump l1
+badnumber2:
+  fail NotANumber
+badnumber1:
+  fail NotANumber
+l3:
+  ret 1
+
