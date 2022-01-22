@@ -241,7 +241,14 @@ void CFGBuilder::visit(IfElseStatement& node) {
    _input_values.push(TEMP);
    node.cond()->accept(*this);
    std::string cond = _return_values.top().first;
+   ReturnType rt = _return_values.top().second;
    _return_values.pop();
+   if (rt != INTEGER) {
+      tagCheck(cond, true, BADNUMBER, NOT_A_NUMBER);
+   }
+   // Convert cond to untagged
+   std::string trueCond = createTemp();
+   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(trueCond, cond, '/', "2"));
    // Create if true block
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
@@ -254,7 +261,7 @@ void CFGBuilder::visit(IfElseStatement& node) {
    _curr_block->addNewChild(false_block);
    // End current block with if/else
    _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
+   _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> if_statements = node.if_statements();
@@ -307,7 +314,14 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
    _input_values.push(TEMP);
    node.cond()->accept(*this);
    std::string cond = _return_values.top().first;
+   ReturnType rt = _return_values.top().second;
    _return_values.pop();
+   if (rt != INTEGER) {
+      tagCheck(cond, true, BADNUMBER, NOT_A_NUMBER);
+   }
+   // Convert cond to untagged
+   std::string trueCond = createTemp();
+   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(trueCond, cond, '/', "2"));
    // Create if true block
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
@@ -320,7 +334,7 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
    _curr_block->addNewChild(false_block);
    // End current block with if/else
    _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
+   _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
@@ -352,7 +366,14 @@ void CFGBuilder::visit(WhileStatement& node) {
    _input_values.push(TEMP);
    node.cond()->accept(*this);
    std::string cond = _return_values.top().first;
+   ReturnType rt = _return_values.top().second;
    _return_values.pop();
+   if (rt != INTEGER) {
+      tagCheck(cond, true, BADNUMBER, NOT_A_NUMBER);
+   }
+   // Convert cond to untagged
+   std::string trueCond = createTemp();
+   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(trueCond, cond, '/', "2"));
    // Create if true block
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
@@ -365,7 +386,7 @@ void CFGBuilder::visit(WhileStatement& node) {
    _curr_block->addNewChild(false_block);
    // End current block with if/else
    _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
+   _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
