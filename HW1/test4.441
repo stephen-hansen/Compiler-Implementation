@@ -2,18 +2,26 @@ class FOO [
    fields a, b, c, d;
    method m1(x, y, z) with locals p, q:
       !this.a = x
+      return 5
 ]
 
 main with x, y, z:
-while x: {
-   x = (y + 1)
-   y = (2 * z)
-   if y: {
-      x = (y + z)
-   } else {
-      x = 2
+z = (1 + (x - (^&@FOO.b.m1(2,y,(z * 3)) / 4)))
+if z: {
+   ifonly y: {
+      print z
    }
-   z = 1
+} else {
+   while x: {
+      return z
+      x = (x + 1)
+   }
 }
-z = x
+if x: {
+   return x
+} else {
+   return y
+}
+return y
+z = (z * 2)
 

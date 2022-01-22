@@ -30,6 +30,7 @@ void CFGBuilder::visit(ArithmeticExpression& node) {
    std::string r2 = p2.first;
    ReturnType rt2 = p2.second;
    _return_values.pop();
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tagged integer check on each operand
    // Only need to check if it's not an int
    if (rt1 != INTEGER) {
@@ -93,6 +94,7 @@ void CFGBuilder::visit(CallExpression& node) {
    std::string receiver = _return_values.top().first;
    ReturnType receivertype = _return_values.top().second;
    _return_values.pop();
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tag check obj is pointer
    if (receivertype != POINTER) {
       tagCheck(receiver, false, BADPOINTER, NOT_A_POINTER);
@@ -119,6 +121,7 @@ void CFGBuilder::visit(FieldReadExpression& node) {
    std::string baseaddr = _return_values.top().first;
    ReturnType basetype = _return_values.top().second;
    _return_values.pop();
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tag check obj is pointer
    if (basetype != POINTER) {
       tagCheck(baseaddr, false, BADPOINTER, NOT_A_POINTER);
@@ -142,6 +145,7 @@ void CFGBuilder::visit(FieldReadExpression& node) {
 }
 
 void CFGBuilder::visit(NewObjectExpression& node) {
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Get the return value early so we can alloc at it
    std::string ret = setReturnName(POINTER);
    // Get size to allocate
@@ -168,11 +172,11 @@ void CFGBuilder::visit(ThisObjectExpression& node) {
 }
 
 void CFGBuilder::visit(AssignmentStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    std::string destRegister = toRegister(node.variable());
    // Set destRegister as input value
    _input_values.push(destRegister);
    // Visit expression
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    node.val()->accept(*this);
    // Get return value
    // This should either be the destRegister pushed in, if it was satisfied by the expression
@@ -186,24 +190,24 @@ void CFGBuilder::visit(AssignmentStatement& node) {
 }
 
 void CFGBuilder::visit(DontCareAssignmentStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // This is like an assignment statement but we're not pushing a dest register
    // And don't need to make an assignment primitive either
    // Still need a dest though for most statements, so push TEMP up
    _input_values.push(TEMP);
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    node.val()->accept(*this);
    // Don't care about return value
    _return_values.pop();
 }
 
 void CFGBuilder::visit(FieldUpdateStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit obj
    _input_values.push(TEMP);
    node.obj()->accept(*this);
    std::string baseaddr = _return_values.top().first;
    ReturnType basetype = _return_values.top().second;
    _return_values.pop();
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tag check obj is pointer
    if (basetype != POINTER) {
       tagCheck(baseaddr, false, BADPOINTER, NOT_A_POINTER);
@@ -233,7 +237,6 @@ void CFGBuilder::visit(FieldUpdateStatement& node) {
 }
 
 void CFGBuilder::visit(IfElseStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit cond
    _input_values.push(TEMP);
    node.cond()->accept(*this);
@@ -250,36 +253,46 @@ void CFGBuilder::visit(IfElseStatement& node) {
    // If block owns false block
    _curr_block->addNewChild(false_block);
    // End current block with if/else
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> if_statements = node.if_statements();
    for (auto & s : if_statements) {
+      if (_curr_block->isUnreachable()) {
+         break;
+      }
       s->accept(*this);
    }
    // Create final block
    std::string finalLabel = createLabel();
    std::shared_ptr<BasicBlock> final_block = std::make_shared<BasicBlock>(finalLabel);
-   // Current block points to but does not own final block
-   _curr_block->addExistingChild(final_block);
-   // End current block with jump to final block
-   _curr_block->setControl(std::make_shared<JumpControl>(finalLabel));
+   if (!_curr_block->isUnreachable()) {
+      // Current block points to but does not own final block
+      _curr_block->addExistingChild(final_block);
+      // End current block with jump to final block
+      _curr_block->setControl(std::make_shared<JumpControl>(finalLabel));
+   }
    // Recursively build false block, push to current scope
    _curr_block = false_block;
    std::vector<std::shared_ptr<ASTStatement>> else_statements = node.else_statements();
    for (auto & s : else_statements) {
+      if (_curr_block->isUnreachable()) {
+         break;
+      }
       s->accept(*this);
    }
-   // False block points to and owns final block
-   _curr_block->addNewChild(final_block);
-   // End current block with jump to final block
-   _curr_block->setControl(std::make_shared<JumpControl>(finalLabel));
+   if (!_curr_block->isUnreachable()) {
+      // False block points to and owns final block
+      _curr_block->addNewChild(final_block);
+      // End current block with jump to final block
+      _curr_block->setControl(std::make_shared<JumpControl>(finalLabel));
+   }
    // Update current block to final block
    _curr_block = final_block;
 }
 
 void CFGBuilder::visit(IfOnlyStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit cond
    _input_values.push(TEMP);
    node.cond()->accept(*this);
@@ -296,23 +309,28 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
    // If block owns false block
    _curr_block->addNewChild(false_block);
    // End current block with if/else
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
    for (auto & s : statements) {
+      if (_curr_block->isUnreachable()) {
+         break;
+      }
       s->accept(*this);
    }
-   // Update current block to jump to false block. Might be different from true_block.
-   _curr_block->setControl(std::make_shared<JumpControl>(falseLabel));
-   // Curr block points to false block but does NOT own it
-   _curr_block->addExistingChild(false_block);
+   if (!_curr_block->isUnreachable()) {
+      // Update current block to jump to false block. Might be different from true_block.
+      _curr_block->setControl(std::make_shared<JumpControl>(falseLabel));
+      // Curr block points to false block but does NOT own it
+      _curr_block->addExistingChild(false_block);
+   }
    // Update current block to false block
    _curr_block = false_block;
 }
 
 void CFGBuilder::visit(WhileStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // End current block by jumping to conditional block
    std::string condLabel = createLabel();
    std::shared_ptr<BasicBlock> cond_block = std::make_shared<BasicBlock>(condLabel);
@@ -336,34 +354,45 @@ void CFGBuilder::visit(WhileStatement& node) {
    // curr block owns false block
    _curr_block->addNewChild(false_block);
    // End current block with if/else
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
    for (auto & s : statements) {
+      if (_curr_block->isUnreachable()) {
+         break;
+      }
       s->accept(*this);
    }
-   // Update current block to jump to cond block. Might be different from true_block.
-   _curr_block->setControl(std::make_shared<JumpControl>(condLabel));
-   // Curr block points to cond block but does NOT own it
-   _curr_block->addExistingChild(cond_block);
+   if (!_curr_block->isUnreachable()) {
+      // Update current block to jump to cond block. Might be different from true_block.
+      _curr_block->setControl(std::make_shared<JumpControl>(condLabel));
+      // Curr block points to cond block but does NOT own it
+      _curr_block->addExistingChild(cond_block);
+   }
    // Update current block to false block
    _curr_block = false_block;
 }
 
 void CFGBuilder::visit(ReturnStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit val, get register to return
    _input_values.push(TEMP);
    node.val()->accept(*this);
    std::string retValue = _return_values.top().first;
    _return_values.pop();
    // Update current block with return control
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<RetControl>(retValue));
+   // Create new block so that we don't override control
+   std::shared_ptr<BasicBlock> next_block = std::make_shared<BasicBlock>("unreachable");
+   // Mark as unreachable
+   next_block->setUnreachable(true);
+   // No one owns it
+   _curr_block = next_block;
 }
 
 void CFGBuilder::visit(PrintStatement& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Visit val, get register to print
    _input_values.push(TEMP);
    node.val()->accept(*this);
@@ -371,6 +400,7 @@ void CFGBuilder::visit(PrintStatement& node) {
    ReturnType retType = _return_values.top().second;
    // Print should probably do a tag check and de-convert the value by dividing by 2
    _return_values.pop();
+   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    if (retType != INTEGER) {
       tagCheck(retValue, true, BADNUMBER, NOT_A_NUMBER);  
    }
@@ -401,6 +431,9 @@ void CFGBuilder::visit(MethodDeclaration& node) {
    // Recursively visit statements and build
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
    for (auto & s : statements) {
+      if (_curr_block->isUnreachable()) {
+         break;
+      }
       s->accept(*this);
    }
    // Append method with ENTRY block (_curr_block will be LAST block here)
@@ -434,7 +467,7 @@ void CFGBuilder::visit(ClassDeclaration& node) {
    for (auto & m : methods) {
       m->accept(*this);
    }
-   // Add clsas to program
+   // Add class to program
    _curr_program->appendClass(_curr_class);
 }
 
@@ -479,9 +512,12 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    // Recursively visit statements and build
    std::vector<std::shared_ptr<ASTStatement>> statements = node.main_statements();
    for (auto & s : statements) {
+      if (_curr_block->isUnreachable()) {
+         break;
+      }
       s->accept(*this);
    }
-   // Main will end with ret 0 due to default control value 
+   // Main will end with ret 0 due to default control value, or ret whatever specified
 }
 
 std::shared_ptr<ProgramCFG> CFGBuilder::build(std::shared_ptr<ProgramDeclaration> p) {

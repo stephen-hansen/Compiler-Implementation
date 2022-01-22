@@ -304,9 +304,16 @@ class BasicBlock
       std::shared_ptr<ControlStatement> _control = std::make_shared<RetControl>("0");
       std::vector<std::shared_ptr<BasicBlock>> _children;
       std::vector<std::weak_ptr<BasicBlock>> _weak_children;
+      bool _unreachable = false;
    public:
       BasicBlock(std::string label): _label(label) {}
       BasicBlock(std::string label, std::vector<std::string> params): _label(label), _params(params) {}
+      bool isUnreachable() {
+         return _unreachable;
+      }
+      void setUnreachable(bool u) {
+         _unreachable = u;
+      }
       void appendPrimitive(std::shared_ptr<PrimitiveStatement> ps) {
          _primitives.push_back(ps);
       }
