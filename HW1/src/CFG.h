@@ -6,6 +6,9 @@
 #include <string>
 #include <vector>
 
+// Forward declare visitor
+class CFGVisitor;
+
 inline unsigned int tag(unsigned int val) {
    return (val << 1) + 1;
 }
@@ -71,6 +74,7 @@ class IRStatement
 {
    public:
       virtual std::string toString() = 0;
+      virtual void accept(CFGVisitor& v) = 0;
 };
 
 class PrimitiveStatement : public IRStatement
@@ -79,14 +83,64 @@ class PrimitiveStatement : public IRStatement
 class ControlStatement : public IRStatement
 {};
 
+// Forward declare all specific nodes here
+class Comment;
+class AssignmentPrimitive;
+class ArithmeticPrimitive;
+class CallPrimitive;
+class PhiPrimitive;
+class AllocPrimitive;
+class PrintPrimitive;
+class GetEltPrimitive;
+class SetEltPrimitive;
+class LoadPrimitive;
+class StorePrimitive;
+class FailControl;
+class JumpControl;
+class IfElseControl;
+class RetControl;
+class BasicBlock;
+class MethodCFG;
+class ClassCFG;
+class ProgramCFG;
+
+// Declare visitor here
+class CFGVisitor
+{
+   public:
+      virtual void visit(Comment& node) = 0;
+      virtual void visit(AssignmentPrimitive& node) = 0;
+      virtual void visit(ArithmeticPrimitive& node) = 0;
+      virtual void visit(CallPrimitive& node) = 0;
+      virtual void visit(PhiPrimitive& node) = 0;
+      virtual void visit(AllocPrimitive& node) = 0;
+      virtual void visit(PrintPrimitive& node) = 0;
+      virtual void visit(GetEltPrimitive& node) = 0;
+      virtual void visit(SetEltPrimitive& node) = 0;
+      virtual void visit(LoadPrimitive& node) = 0;
+      virtual void visit(StorePrimitive& node) = 0;
+      virtual void visit(FailControl& node) = 0;
+      virtual void visit(JumpControl& node) = 0;
+      virtual void visit(IfElseControl& node) = 0;
+      virtual void visit(RetControl& node) = 0;
+      virtual void visit(BasicBlock& node) = 0;
+      virtual void visit(MethodCFG& node) = 0;
+      virtual void visit(ClassCFG& node) = 0;
+      virtual void visit(ProgramCFG& node) = 0;
+};
+
 class Comment : public PrimitiveStatement
 {
    private:
       std::string _text;
    public:
       Comment(std::string text): _text(text) {}
+      std::string text() { return _text; }
       std::string toString() override {
          return "# " + _text;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -97,8 +151,13 @@ class AssignmentPrimitive : public PrimitiveStatement
       std::string _rhs;
    public:
       AssignmentPrimitive(std::string lhs, std::string rhs): _lhs(lhs), _rhs(rhs) {}
+      std::string lhs() { return _lhs; }
+      std::string rhs() { return _rhs; }
       std::string toString() override {
          return _lhs + " = " + _rhs;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -111,8 +170,15 @@ class ArithmeticPrimitive : public PrimitiveStatement
       std::string _op2;
    public:
       ArithmeticPrimitive(std::string lhs, std::string op1, char op, std::string op2): _lhs(lhs), _op1(op1), _op(op), _op2(op2) {}
+      std::string lhs() { return _lhs; }
+      std::string op1() { return _op1; }
+      char op() { return _op; }
+      std::string op2() { return _op2; }
       std::string toString() override {
          return _lhs + " = " + _op1 + " " + _op + " " + _op2;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -129,6 +195,10 @@ class CallPrimitive : public PrimitiveStatement
          _codeaddr(codeaddr),
          _receiver(receiver),
          _args(args) {}
+      std::string lhs() { return _lhs; }
+      std::string codeaddr() { return _codeaddr; }
+      std::string receiver() { return _receiver; }
+      std::vector<std::string> args() { return _args; }
       std::string toString() override {
          std::stringstream buf;
          buf << _lhs << " = call(" << _codeaddr << ", " << _receiver;
@@ -137,6 +207,9 @@ class CallPrimitive : public PrimitiveStatement
          }
          buf << ")";
          return buf.str();
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -147,6 +220,8 @@ class PhiPrimitive : public PrimitiveStatement
       std::vector<std::pair<std::string, std::string>> _args;
    public:
       PhiPrimitive(std::string lhs, std::vector<std::pair<std::string, std::string>> args): _lhs(lhs), _args(args) {}
+      std::string lhs() { return _lhs; }
+      std::vector<std::pair<std::string, std::string>> args() { return _args; }
       std::string toString() override {
          std::stringstream buf;
          buf << _lhs << " = phi(";
@@ -161,6 +236,9 @@ class PhiPrimitive : public PrimitiveStatement
          buf << ")";
          return buf.str();
       }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
+      }
 };
 
 class AllocPrimitive : public PrimitiveStatement
@@ -170,8 +248,13 @@ class AllocPrimitive : public PrimitiveStatement
       std::string _size;
    public:
       AllocPrimitive(std::string lhs, std::string size): _lhs(lhs), _size(size) {}
+      std::string lhs() { return _lhs; }
+      std::string size() { return _size; }
       std::string toString() override {
          return _lhs + " = alloc(" + _size + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -181,8 +264,12 @@ class PrintPrimitive : public PrimitiveStatement
       std::string _val;
    public:
       PrintPrimitive(std::string val): _val(val) {}
+      std::string val() { return _val; }
       std::string toString() override {
          return "print(" + _val + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -194,8 +281,14 @@ class GetEltPrimitive : public PrimitiveStatement
       std::string _index;
    public:
       GetEltPrimitive(std::string lhs, std::string arr, std::string index): _lhs(lhs), _arr(arr), _index(index) {}
+      std::string lhs() { return _lhs; }
+      std::string arr() { return _arr; }
+      std::string index() { return _index; }
       std::string toString() override {
          return _lhs + " = getelt(" + _arr + ", " + _index + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -212,8 +305,15 @@ class SetEltPrimitive : public PrimitiveStatement
          _arr(arr),
          _index(index),
          _val(val) {}
+      std::string lhs() { return _lhs; }
+      std::string arr() { return _arr; }
+      std::string index() { return _index; }
+      std::string val() { return _val; }
       std::string toString() override {
          return _lhs + " = setelt(" + _arr + ", " + _index + ", " + _val + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -224,8 +324,13 @@ class LoadPrimitive : public PrimitiveStatement
       std::string _addr;
    public:
       LoadPrimitive(std::string lhs, std::string addr): _lhs(lhs), _addr(addr) {}
+      std::string lhs() { return _lhs; }
+      std::string addr() { return _addr; }
       std::string toString() override {
          return _lhs + " = load(" + _addr + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -236,8 +341,13 @@ class StorePrimitive : public PrimitiveStatement
       std::string _val;
    public:
       StorePrimitive(std::string addr, std::string val): _addr(addr), _val(val) {}
+      std::string addr() { return _addr; }
+      std::string val() { return _val; }
       std::string toString() override {
          return "store(" + _addr + ", " + _val + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -252,8 +362,12 @@ class FailControl : public ControlStatement
       std::string _message;
    public:
       FailControl(std::string message): _message(message) {}
+      std::string message() { return _message; }
       std::string toString() override {
          return "fail " + _message;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -263,8 +377,12 @@ class JumpControl : public ControlStatement
       std::string _branch;
    public:
       JumpControl(std::string branch): _branch(branch) {}
+      std::string branch() { return _branch; }
       std::string toString() override {
          return "jump " + _branch;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -279,8 +397,14 @@ class IfElseControl : public ControlStatement
          _cond(cond),
          _if_branch(if_branch),
          _else_branch(else_branch) {}
+      std::string cond() { return _cond; }
+      std::string if_branch() { return _if_branch; }
+      std::string else_branch() { return _else_branch; }
       std::string toString() override {
          return "if " + _cond + " then " + _if_branch + " else " + _else_branch;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -290,8 +414,12 @@ class RetControl : public ControlStatement
       std::string _val;
    public:
       RetControl(std::string val): _val(val) {}
+      std::string val() { return _val; }
       std::string toString() override {
          return "ret " + _val;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
       }
 };
 
@@ -307,6 +435,12 @@ class BasicBlock
       bool _unreachable = false;
    public:
       BasicBlock(std::string label): _label(label) {}
+      std::string label() { return _label; }
+      std::vector<std::string> params() { return _params; }
+      std::vector<std::shared_ptr<PrimitiveStatement>> primitives() { return _primitives; }
+      std::shared_ptr<ControlStatement> control() { return _control; }
+      std::vector<std::shared_ptr<BasicBlock>> children() { return _children; }
+      std::vector<std::weak_ptr<BasicBlock>> weak_children() { return _weak_children; }
       BasicBlock(std::string label, std::vector<std::string> params): _label(label), _params(params) {}
       bool isUnreachable() {
          return _unreachable;
@@ -360,6 +494,9 @@ class BasicBlock
          }
          return buf.str();
       }
+      void accept(CFGVisitor& v) {
+         v.visit(*this);
+      }
 };
 
 class MethodCFG
@@ -371,6 +508,10 @@ class MethodCFG
       std::string toString() {
          return _first_block->toStringRecursive();
       }
+      void accept(CFGVisitor& v) {
+         v.visit(*this);
+      }
+      std::shared_ptr<BasicBlock> first_block() { return _first_block; }
 };
 
 class ClassCFG
@@ -420,8 +561,14 @@ class ClassCFG
          return buf.str();
       }
       std::string name() { return _name; }
+      std::vector<std::shared_ptr<MethodCFG>> methods() { return _methods; }
+      std::vector<std::string> vtable() { return _vtable; }
+      std::vector<unsigned long> field_table() { return _field_table; }
       void appendMethod(std::shared_ptr<MethodCFG> m) {
          _methods.push_back(m);
+      }
+      void accept(CFGVisitor& v) {
+         v.visit(*this);
       }
 };
 
@@ -453,6 +600,11 @@ class ProgramCFG
       void appendClass(std::shared_ptr<ClassCFG> c) {
          _classes[c->name()] = c;
       }
+      void accept(CFGVisitor& v) {
+         v.visit(*this);
+      }
+      std::shared_ptr<MethodCFG> main_method() { return _main_method; }
+      std::map<std::string, std::shared_ptr<ClassCFG>> classes() { return _classes; }
 };
 
 #endif
