@@ -45,20 +45,20 @@ inline bool isTemporary(std::string reg) {
 }
 
 inline bool isVariable(std::string reg) {
-   bool allalpha = true;
-   for (size_t i=1; i<reg.length(); i++) {
-      if (!std::isalpha(reg[i])) {
-         allalpha = false;
+   bool allalphanum = true;
+   for (size_t i=2; i<reg.length(); i++) {
+      if (!std::isalnum(reg[i])) {
+         allalphanum = false;
          break;
       }
    }
-   return reg[0] == '%' && allalpha;
+   return reg[0] == '%' && std::isalpha(reg[1]) && allalphanum;
 }
 
 inline bool isNumber(std::string reg) {
-   bool alldigit = false;
+   bool alldigit = true;
    for (size_t i=0; i<reg.length(); i++) {
-      if (!std::isalpha(reg[i])) {
+      if (!std::isdigit(reg[i])) {
          alldigit = false;
          break;
       }

@@ -1,6 +1,6 @@
 #include <iostream>
+#include "ArithmeticOptimizer.h"
 #include "CFGBuilder.h"
-#include "IdentityOptimizer.h"
 #include "Parser.h"
 
 int main(int argc, char ** argv) {
@@ -17,7 +17,7 @@ int main(int argc, char ** argv) {
    }
    ProgramParser parser;
    CFGBuilder builder;
-   IdentityOptimizer optimizer;
+   ArithmeticOptimizer peephole_optimizer;
    try {
       std::shared_ptr<ProgramDeclaration> progAST = parser.parse(std::cin);
       if (printAST) {
@@ -29,7 +29,7 @@ int main(int argc, char ** argv) {
          std::cout << progCFG->toString() << std::endl;
          return 0;
       }
-      std::shared_ptr<ProgramCFG> optimizedCFG = optimizer.optimize(progCFG);
+      std::shared_ptr<ProgramCFG> optimizedCFG = peephole_optimizer.optimize(progCFG);
       std::cout << optimizedCFG->toString() << std::endl;
       return 0;
    } catch (ParserException & p) {
