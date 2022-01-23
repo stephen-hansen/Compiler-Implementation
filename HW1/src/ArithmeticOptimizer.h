@@ -133,6 +133,13 @@ class ArithmeticOptimizer : public IdentityOptimizer
          std::string val = adjustTemp(node.val());
          _new_block->setControl(std::make_shared<RetControl>(val));
       }
+      void visit(MethodCFG& node) {
+         // Wipe map on each method
+         // Each method has its own map
+         _temp_to_const.clear();
+         // Call parent method
+         IdentityOptimizer::visit(node);
+      }
 };
 
 #endif

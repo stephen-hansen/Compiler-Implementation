@@ -535,6 +535,7 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    for (auto & c : classes) {
       c->accept(*this);
    }
+   resetCounter();
    _curr_block = main_block;
    // Initialize every local to 0 (0 << 1 + 1 => 1 as tagged)
    for (auto & l : node.main_locals()) {
