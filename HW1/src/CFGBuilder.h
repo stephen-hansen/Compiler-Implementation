@@ -87,8 +87,8 @@ class CFGBuilder : public ASTVisitor
             std::swap(failureBlockLabel, nextBlockLabel);
          } 
          // curr block owns success and failure
-         _curr_block->addNewChild(failureBlock);
-         _curr_block->addNewChild(successBlock);
+         addNewChild(_curr_block, failureBlock);
+         addNewChild(_curr_block, successBlock);
          _curr_block->setControl(std::make_shared<IfElseControl>(check, failureBlockLabel, nextBlockLabel));
          // Remove current block and replace with success block
          if (expectedTag) {
@@ -105,9 +105,9 @@ class CFGBuilder : public ASTVisitor
          std::string nextBlockLabel = createLabel();
          std::shared_ptr<BasicBlock> successBlock = std::make_shared<BasicBlock>(nextBlockLabel);
          // Curr block owns success block
-         _curr_block->addNewChild(successBlock);
+         addNewChild(_curr_block, successBlock);
          // Curr block owns failure block
-         _curr_block->addNewChild(failureBlock);
+         addNewChild(_curr_block, failureBlock);
          _curr_block->setControl(std::make_shared<IfElseControl>(reg, nextBlockLabel, failureBlockLabel));
          // Remove current block and replace with success block
          _curr_block = successBlock;

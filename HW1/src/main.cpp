@@ -1,5 +1,6 @@
 #include <iostream>
 #include "ArithmeticOptimizer.h"
+#include "SSAOptimizer.h"
 #include "CFGBuilder.h"
 #include "Parser.h"
 
@@ -17,6 +18,7 @@ int main(int argc, char ** argv) {
    }
    ProgramParser parser;
    CFGBuilder builder;
+   SSAOptimizer ssa_optimizer;
    ArithmeticOptimizer peephole_optimizer;
    try {
       std::shared_ptr<ProgramDeclaration> progAST = parser.parse(std::cin);
@@ -25,12 +27,13 @@ int main(int argc, char ** argv) {
          return 0;
       }
       std::shared_ptr<ProgramCFG> progCFG = builder.build(progAST);
-      if (noopt) {
-         std::cout << progCFG->toString() << std::endl;
-         return 0;
+      if (!noSSA) {
+         progCFG = ssa_optimizer.optimize(progCFG);
       }
-      std::shared_ptr<ProgramCFG> optimizedCFG = peephole_optimizer.optimize(progCFG);
-      std::cout << optimizedCFG->toString() << std::endl;
+      if (!noopt) {
+         progCFG = peephole_optimizer.optimize(progCFG);
+      }
+      std::cout << progCFG->toString() << std::endl;
       return 0;
    } catch (ParserException & p) {
       std::cerr << "Parser error:" << std::endl;

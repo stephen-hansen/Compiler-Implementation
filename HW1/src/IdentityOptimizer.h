@@ -12,7 +12,7 @@ class IdentityOptimizer : public CFGVisitor
       std::shared_ptr<ProgramCFG> _new_prog;
       std::shared_ptr<MethodCFG> _new_method;
       std::shared_ptr<ClassCFG> _new_class;
-      std::shared_ptr<BasicBlock> _new_block;
+      std::shared_ptr<BasicBlock> _new_block = NULL;
       std::map<std::string, std::shared_ptr<BasicBlock>> _label_to_block;
    public:
       // Intentionally call appendPrimitive on each visit to add a copy
@@ -74,7 +74,7 @@ class IdentityOptimizer : public CFGVisitor
       void visit(RetControl& node) {
          _new_block->setControl(std::make_shared<RetControl>(node.val()));
       }
-      void visit(BasicBlock& node) {
+      void optimizeBlock(BasicBlock& node) {
          std::string label = node.label();
          // Assume incoming node is already copied into _label_to_block
          _new_block = _label_to_block[label];
@@ -85,23 +85,43 @@ class IdentityOptimizer : public CFGVisitor
          }
          // Optimize control
          node.control()->accept(*this);
+      }
+      void optimizeChild(BasicBlock& node, std::shared_ptr<BasicBlock>& c) {
+         std::string label = node.label();
+         std::string child_label = c->label();
+         if (!_label_to_block.count(child_label)) {
+            _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, c->params());
+         }
+         addNewChild(_label_to_block[label], _label_to_block[child_label]);
+         c->accept(*this);
+      }
+      void buildWeakChildConns(BasicBlock& node) {
+         std::string label = node.label();
+         // Can now build weak connections
+         std::vector<std::weak_ptr<BasicBlock>> weak_children = node.weak_children();
+         for (auto & wc : weak_children) {
+            std::string child_label = wc.lock()->label();
+            if (!_label_to_block.count(child_label)) {
+               _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, wc.lock()->params());
+            }
+            addExistingChild(_label_to_block[label], _label_to_block[child_label]);
+            // No recursion
+         }
+      }
+      void optimizeChildren(BasicBlock& node) {
+         std::string label = node.label();
          // Now optimize every child block recursively
          // Don't use _new_block here since recursion could change it
          // Create block first then visit
          std::vector<std::shared_ptr<BasicBlock>> children = node.children();
          for (auto & c : children) {
-            std::string child_label = c->label();
-            _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, c->params());
-            _label_to_block[label]->addNewChild(_label_to_block[child_label]);
-            c->accept(*this);
+            optimizeChild(node, c);
          }
-         // At end, we assume that entire tree has been parsed
-         // Can now build weak connections
-         std::vector<std::weak_ptr<BasicBlock>> weak_children = node.weak_children();
-         for (auto & wc : weak_children) {
-            std::string child_label = wc.lock()->label();
-            _label_to_block[label]->addExistingChild(_label_to_block[child_label]);
-         }
+         buildWeakChildConns(node);
+      }
+      void visit(BasicBlock& node) {
+         optimizeBlock(node);
+         optimizeChildren(node);
       }
       void visit(MethodCFG& node) {
          std::shared_ptr<BasicBlock> first_block = node.first_block();

@@ -2,6 +2,7 @@
 #define _CS_441_CFG_H
 #include <map>
 #include <memory>
+#include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -45,14 +46,14 @@ inline bool isTemporary(std::string reg) {
 }
 
 inline bool isVariable(std::string reg) {
-   bool allalphanum = true;
-   for (size_t i=2; i<reg.length(); i++) {
-      if (!std::isalnum(reg[i])) {
-         allalphanum = false;
+   bool allalpha = true;
+   for (size_t i=1; i<reg.length(); i++) {
+      if (!std::isalpha(reg[i])) {
+         allalpha = false;
          break;
       }
    }
-   return reg[0] == '%' && std::isalpha(reg[1]) && allalphanum;
+   return reg[0] == '%' && allalpha;
 }
 
 inline bool isNumber(std::string reg) {
@@ -450,6 +451,9 @@ class BasicBlock
       void setUnreachable(bool u) {
          _unreachable = u;
       }
+      void insertPrimitive(std::shared_ptr<PrimitiveStatement> ps) {
+         _primitives.insert(_primitives.begin(), ps);
+      }
       void appendPrimitive(std::shared_ptr<PrimitiveStatement> ps) {
          _primitives.push_back(ps);
       }
@@ -504,14 +508,14 @@ class BasicBlock
       }
 };
 
-inline void addNewChild(std::shared_ptr<BasicBlock> b1, std::shared_ptr<BasicBlock> b2) {
+inline void addNewChild(std::shared_ptr<BasicBlock> & b1, std::shared_ptr<BasicBlock> & b2) {
    b1->addNewChild(b2);
    b2->addPredecessor(b1);
 }
 
-inline void addExistingChild(std::shared_ptr<BasicBlock> b1, std::weak_ptr<BasicBlock> b2) {
+inline void addExistingChild(std::shared_ptr<BasicBlock> & b1, std::shared_ptr<BasicBlock> & b2) {
    b1->addExistingChild(b2);
-   b2.lock()->addPredecessor(b1);
+   b2->addPredecessor(b1);
 }
 
 class MethodCFG

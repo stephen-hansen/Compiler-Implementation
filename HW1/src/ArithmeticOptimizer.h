@@ -85,7 +85,7 @@ class ArithmeticOptimizer : public IdentityOptimizer
          std::string lhs = node.lhs();
          std::vector<std::pair<std::string, std::string>> args;
          for (auto & a : node.args()) {
-            args.push_back(std::make_pair(adjustTemp(a.first), adjustTemp(a.second)));
+            args.push_back(std::make_pair(a.first, adjustTemp(a.second)));
          }
          _new_block->appendPrimitive(std::make_shared<PhiPrimitive>(lhs, args));
       }
