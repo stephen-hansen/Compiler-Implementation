@@ -105,11 +105,12 @@ class IdentityOptimizer : public CFGVisitor
       }
       void visit(MethodCFG& node) {
          std::shared_ptr<BasicBlock> first_block = node.first_block();
+         std::vector<std::string> variables = node.variables();
          std::string label = first_block->label();
          std::vector<std::string> params = first_block->params();
          // Make first block and new method
          _label_to_block[label] = std::make_shared<BasicBlock>(label, params);
-         _new_method = std::make_shared<MethodCFG>(_label_to_block[label]);
+         _new_method = std::make_shared<MethodCFG>(_label_to_block[label], variables);
          // Optimize first block
          first_block->accept(*this);
       }

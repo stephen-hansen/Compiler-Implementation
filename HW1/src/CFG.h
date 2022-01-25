@@ -432,6 +432,7 @@ class BasicBlock
       std::shared_ptr<ControlStatement> _control = std::make_shared<RetControl>("0");
       std::vector<std::shared_ptr<BasicBlock>> _children;
       std::vector<std::weak_ptr<BasicBlock>> _weak_children;
+      std::vector<std::weak_ptr<BasicBlock>> _predecessors;
       bool _unreachable = false;
    public:
       BasicBlock(std::string label): _label(label) {}
@@ -441,6 +442,7 @@ class BasicBlock
       std::shared_ptr<ControlStatement> control() { return _control; }
       std::vector<std::shared_ptr<BasicBlock>> children() { return _children; }
       std::vector<std::weak_ptr<BasicBlock>> weak_children() { return _weak_children; }
+      std::vector<std::weak_ptr<BasicBlock>> predecessors() { return _predecessors; }
       BasicBlock(std::string label, std::vector<std::string> params): _label(label), _params(params) {}
       bool isUnreachable() {
          return _unreachable;
@@ -453,6 +455,9 @@ class BasicBlock
       }
       void setControl(std::shared_ptr<ControlStatement> c) {
          _control = c;
+      }
+      void addPredecessor(std::weak_ptr<BasicBlock> b) {
+         _predecessors.push_back(b);
       }
       // Push any children created with NEW inside the current scope
       void addNewChild(std::shared_ptr<BasicBlock> b) {
@@ -499,12 +504,25 @@ class BasicBlock
       }
 };
 
+inline void addNewChild(std::shared_ptr<BasicBlock> b1, std::shared_ptr<BasicBlock> b2) {
+   b1->addNewChild(b2);
+   b2->addPredecessor(b1);
+}
+
+inline void addExistingChild(std::shared_ptr<BasicBlock> b1, std::weak_ptr<BasicBlock> b2) {
+   b1->addExistingChild(b2);
+   b2.lock()->addPredecessor(b1);
+}
+
 class MethodCFG
 {
    private:
       std::shared_ptr<BasicBlock> _first_block;
+      std::vector<std::string> _variables;
    public:
-      MethodCFG(std::shared_ptr<BasicBlock> first_block): _first_block(first_block) {}
+      MethodCFG(std::shared_ptr<BasicBlock> first_block, std::vector<std::string> variables):
+         _first_block(first_block),
+         _variables(variables) {}
       std::string toString() {
          return _first_block->toStringRecursive();
       }
@@ -512,6 +530,7 @@ class MethodCFG
          v.visit(*this);
       }
       std::shared_ptr<BasicBlock> first_block() { return _first_block; }
+      std::vector<std::string> variables() { return _variables; }
 };
 
 class ClassCFG

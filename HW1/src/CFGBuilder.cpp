@@ -253,12 +253,12 @@ void CFGBuilder::visit(IfElseStatement& node) {
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
    // If block owns true block
-   _curr_block->addNewChild(true_block);
+   addNewChild(_curr_block, true_block);
    // Create if false block
    std::string falseLabel = createLabel();
    std::shared_ptr<BasicBlock> false_block = std::make_shared<BasicBlock>(falseLabel);
    // If block owns false block
-   _curr_block->addNewChild(false_block);
+   addNewChild(_curr_block, false_block);
    // End current block with if/else
    _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
@@ -287,16 +287,16 @@ void CFGBuilder::visit(IfElseStatement& node) {
    std::shared_ptr<BasicBlock> final_block = std::make_shared<BasicBlock>(finalLabel);
    bool final_block_is_owned = false;
    if (!last_false_block->isUnreachable()) {
-      last_false_block->addNewChild(final_block);
+      addNewChild(last_false_block, final_block);
       final_block_is_owned = true;
       last_false_block->setControl(std::make_shared<JumpControl>(finalLabel));
    }
    if (!last_true_block->isUnreachable()) {
       if (!final_block_is_owned) {
-         last_true_block->addNewChild(final_block);
+         addNewChild(last_true_block, final_block);
          final_block_is_owned = true;
       } else {
-         last_true_block->addExistingChild(final_block);
+         addExistingChild(last_true_block, final_block);
       }
       // End current block with jump to final block
       last_true_block->setControl(std::make_shared<JumpControl>(finalLabel));
@@ -326,12 +326,12 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
    // If block owns true block
-   _curr_block->addNewChild(true_block);
+   addNewChild(_curr_block, true_block);
    // Create if false block
    std::string falseLabel = createLabel();
    std::shared_ptr<BasicBlock> false_block = std::make_shared<BasicBlock>(falseLabel);
    // If block owns false block
-   _curr_block->addNewChild(false_block);
+   addNewChild(_curr_block, false_block);
    // End current block with if/else
    _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
@@ -348,7 +348,7 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
       // Update current block to jump to false block. Might be different from true_block.
       _curr_block->setControl(std::make_shared<JumpControl>(falseLabel));
       // Curr block points to false block but does NOT own it
-      _curr_block->addExistingChild(false_block);
+      addExistingChild(_curr_block, false_block);
    }
    // Update current block to false block
    _curr_block = false_block;
@@ -359,7 +359,7 @@ void CFGBuilder::visit(WhileStatement& node) {
    std::string condLabel = createLabel();
    std::shared_ptr<BasicBlock> cond_block = std::make_shared<BasicBlock>(condLabel);
    // Original block owns cond block
-   _curr_block->addNewChild(cond_block);
+   addNewChild(_curr_block, cond_block);
    _curr_block->setControl(std::make_shared<JumpControl>(condLabel));
    // Visit cond
    _curr_block = cond_block;
@@ -378,12 +378,12 @@ void CFGBuilder::visit(WhileStatement& node) {
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
    // curr block owns true block
-   _curr_block->addNewChild(true_block);
+   addNewChild(_curr_block, true_block);
    // Create if false block
    std::string falseLabel = createLabel();
    std::shared_ptr<BasicBlock> false_block = std::make_shared<BasicBlock>(falseLabel);
    // curr block owns false block
-   _curr_block->addNewChild(false_block);
+   addNewChild(_curr_block, false_block);
    // End current block with if/else
    _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
@@ -400,7 +400,7 @@ void CFGBuilder::visit(WhileStatement& node) {
       // Update current block to jump to cond block. Might be different from true_block.
       _curr_block->setControl(std::make_shared<JumpControl>(condLabel));
       // Curr block points to cond block but does NOT own it
-      _curr_block->addExistingChild(cond_block);
+      addExistingChild(_curr_block, cond_block);
    }
    // Update current block to false block
    _curr_block = false_block;
@@ -468,7 +468,13 @@ void CFGBuilder::visit(MethodDeclaration& node) {
       s->accept(*this);
    }
    // Append method with ENTRY block (_curr_block will be LAST block here)
-   _curr_class->appendMethod(std::make_shared<MethodCFG>(entry_block));
+   std::vector<std::string> m_params = node.params();
+   std::vector<std::string> m_locals = node.locals();
+   std::vector<std::string> variables;
+   variables.reserve(m_params.size() + m_locals.size());
+   variables.insert(variables.end(), m_params.begin(), m_params.end());
+   variables.insert(variables.end(), m_locals.begin(), m_locals.end());
+   _curr_class->appendMethod(std::make_shared<MethodCFG>(entry_block, variables));
 }
 
 void CFGBuilder::visit(ClassDeclaration& node) {
@@ -529,8 +535,9 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    } 
    // Build main method
    std::shared_ptr<BasicBlock> main_block = std::make_shared<BasicBlock>("main");
+   std::vector<std::string> variables = node.main_locals();
    // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
-   _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block));
+   _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block, variables));
    // Build every class
    for (auto & c : classes) {
       c->accept(*this);
