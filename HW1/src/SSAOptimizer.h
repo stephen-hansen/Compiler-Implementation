@@ -178,6 +178,16 @@ class SSAOptimizer : public IdentityOptimizer
          for (auto & kv : _label_to_block) {
             std::string label = kv.first;
             std::shared_ptr<BasicBlock> block = kv.second;
+            std::vector<std::string> newParams;
+            // Dumb hack to make parameters first "version"
+            for (auto & p : block->params()) {
+               std::cout << p << std::endl;
+               if (isVariable(p)) {
+                  p += "0";
+               }
+               newParams.push_back(p);
+            }
+            block->set_params(newParams);
             if (block->predecessors().size() > 1) {
                for (auto & v : _label_to_method[label]->variables()) {
                   std::string reg = toRegister(v);

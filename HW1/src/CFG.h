@@ -53,7 +53,7 @@ inline bool isVariable(std::string reg) {
          break;
       }
    }
-   return reg[0] == '%' && allalpha;
+   return reg[0] == '%' && allalpha && reg != "%this";
 }
 
 inline bool isNumber(std::string reg) {
@@ -439,6 +439,7 @@ class BasicBlock
       BasicBlock(std::string label): _label(label) {}
       std::string label() { return _label; }
       std::vector<std::string> params() { return _params; }
+      void set_params(std::vector<std::string> params) { _params = params; }
       std::vector<std::shared_ptr<PrimitiveStatement>> primitives() { return _primitives; }
       std::shared_ptr<ControlStatement> control() { return _control; }
       std::vector<std::shared_ptr<BasicBlock>> children() { return _children; }

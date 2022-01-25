@@ -1,0 +1,94 @@
+data:
+global array vtblFOO: { m1FOO }
+global array fieldsFOO: { 2, 3, 4, 5 }
+code:
+
+m1FOO(%this, %x, %y, %z):
+  %p0 = 1
+  %q0 = 1
+  # !this.a = x
+  %1 = %this & 1
+  if %1 then badpointer1 else l1
+badpointer1:
+  fail NotAPointer
+l1:
+  %2 = %this + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 0)
+  if %4 then l2 else badfield1
+l2:
+  %5 = setelt(%this, %4, %x0)
+  # return 5
+  ret 11
+badfield1:
+  fail NoSuchField
+
+main:
+  %x0 = 1
+  %y0 = 1
+  # x = 2
+  %x1 = 5
+  # y = 3
+  %y1 = 7
+  # if 0: { ... } else { ... }
+  if 0 then l3 else l4
+l3:
+  # x = (x - 1)
+  # (x - 1)
+  %2 = %x1 & 1
+  if %2 then l5 else badnumber1
+l5:
+  %3 = %x1 - 3
+  %x2 = %3 + 1
+  jump l7
+badnumber1:
+  fail NotANumber
+l4:
+  # x = (x + 2)
+  # (x + 2)
+  %4 = %x1 & 1
+  if %4 then l6 else badnumber2
+l6:
+  %x3 = %x1 + 4
+  jump l7
+l7:
+  %y2 = phi(l5, %y1, l6, %y1)
+  %x4 = phi(l5, %x2, l6, %x3)
+  # x = (x * 3)
+  # (x * 3)
+  %6 = %x4 & 1
+  if %6 then l8 else badnumber3
+l8:
+  %7 = %x4 / 2
+  %9 = %7 * 3
+  %10 = %9 * 2
+  %x5 = %10 + 1
+  jump l9
+l9:
+  %y3 = phi(l8, %y2, l13, %y4)
+  %x6 = phi(l8, %x5, l13, %x6)
+  %11 = %y3 & 1
+  if %11 then l10 else badnumber4
+l10:
+  %12 = %y3 / 2
+  # while y: { ... }
+  if %12 then l11 else l12
+l11:
+  # y = (y + 2)
+  # (y + 2)
+  %13 = %y3 & 1
+  if %13 then l13 else badnumber5
+l13:
+  %y4 = %y3 + 4
+  jump l9
+badnumber5:
+  fail NotANumber
+l12:
+  ret 0
+badnumber4:
+  fail NotANumber
+badnumber3:
+  fail NotANumber
+badnumber2:
+  fail NotANumber
+
