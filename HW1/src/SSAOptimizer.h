@@ -36,8 +36,14 @@ class SSAOptimizer : public IdentityOptimizer
    protected:
       // Map block label to counters mapping variable name to final version at end of block
       std::map<std::string, std::map<std::string, unsigned int>> _label_to_post_counters;
+      std::map<std::string, std::map<std::string, unsigned int>> _label_to_pre_counters;
+      // Map var x to next unused version #
+      // Useful if creating a new version #
       std::map<std::string, unsigned int> _global_counters;
+      // Map var x to most recently used version #
+      // May be different from global # in regard to nested expressions
       std::map<std::string, unsigned int> _set_counter;
+      std::map<std::string, std::shared_ptr<MethodCFG>> _label_to_method;
    public:
       // Comment doesn't need adjustment
       void visit(AssignmentPrimitive& node) {
@@ -136,6 +142,7 @@ class SSAOptimizer : public IdentityOptimizer
          buildWeakChildConns(node);
       }
       void visit(BasicBlock& node) {
+         _label_to_method[node.label()] = _new_method;
          std::vector<std::string> variables = _new_method->variables();
          std::map<std::string, unsigned int> pre_counters;
          // Check if the block will need phi node later
@@ -144,41 +151,48 @@ class SSAOptimizer : public IdentityOptimizer
             for (auto & v : variables) {
                adjustLHSVariable(toRegister(v));
             }
-            // Store pre-counters
-            pre_counters = _global_counters;
          }
+         std::string label = node.label();
+         // Map counters at start of block to label
+         _label_to_pre_counters[label] = _set_counter;
          // Optimize block like before
          optimizeBlock(node);
-         std::string label = node.label();
          // Store final counters in a map using copy on assignment
-         _label_to_post_counters[label] = _global_counters;
+         _label_to_post_counters[label] = _set_counter;
          // Optimize children
          optimizeChildren(node);
-         // OK OK OK children are done time to actually add in the phi node
-         // By definition this should (?) cover the predecessors since I've structured
-         // everything into a tree
-         if (node.predecessors().size() > 1) {
-            for (auto & v : variables) {
-               std::string reg = toRegister(v);
-               std::string lhs = reg + std::to_string(pre_counters[reg]);
-               std::vector<std::pair<std::string, std::string>> phi_args;
-               for (auto & p : node.predecessors()) {
-                  std::string pred_label = p.lock()->label();
-                  std::string pred_var = reg + std::to_string(_label_to_post_counters[pred_label][reg]);
-                  phi_args.push_back(std::make_pair(pred_label, pred_var));
-               }
-               // Insert phi node at start
-               _label_to_block[label]->insertPrimitive(std::make_shared<PhiPrimitive>(lhs, phi_args));
-            }
-         }
       }
       void visit(MethodCFG& node) {
-         // Reset global counters
+         // Reset global counters on new method
          _global_counters.clear();
+         _set_counter.clear();
          // Grab the method variables
          std::vector<std::string> variables = node.variables();
          // Call parent method to add in the versioning
          IdentityOptimizer::visit(node);
+      }
+      void visit(ProgramCFG& node) {
+         // Optimize program
+         IdentityOptimizer::visit(node);
+         // Post-process phi statements
+         for (auto & kv : _label_to_block) {
+            std::string label = kv.first;
+            std::shared_ptr<BasicBlock> block = kv.second;
+            if (block->predecessors().size() > 1) {
+               for (auto & v : _label_to_method[label]->variables()) {
+                  std::string reg = toRegister(v);
+                  std::string lhs = reg + std::to_string(_label_to_pre_counters[label][reg]);
+                  std::vector<std::pair<std::string, std::string>> phi_args;
+                  for (auto & p : block->predecessors()) {
+                     std::string pred_label = p.lock()->label();
+                     std::string pred_var = reg + std::to_string(_label_to_post_counters[pred_label][reg]);
+                     phi_args.push_back(std::make_pair(pred_label, pred_var));
+                  }
+                  // Insert phi at start
+                  block->insertPrimitive(std::make_shared<PhiPrimitive>(lhs, phi_args));
+               }
+            }
+         }
       }
 };
 
