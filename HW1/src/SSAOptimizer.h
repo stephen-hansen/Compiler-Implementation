@@ -181,7 +181,6 @@ class SSAOptimizer : public IdentityOptimizer
             std::vector<std::string> newParams;
             // Dumb hack to make parameters first "version"
             for (auto & p : block->params()) {
-               std::cout << p << std::endl;
                if (isVariable(p)) {
                   p += "0";
                }
