@@ -53,7 +53,7 @@ inline bool isVariable(std::string reg) {
          break;
       }
    }
-   return reg[0] == '%' && allalpha && reg != "%this";
+   return reg[0] == '%' && allalpha;
 }
 
 inline bool isNumber(std::string reg) {
