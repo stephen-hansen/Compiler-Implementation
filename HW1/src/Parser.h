@@ -17,6 +17,8 @@ class ParserException : public std::exception
 
 class ProgramParser
 {
+   private:
+      bool _inside_method_body = false;
    public:
       int skipChars(std::istream & input, std::string chars);
       int skipWhitespace(std::istream & input);

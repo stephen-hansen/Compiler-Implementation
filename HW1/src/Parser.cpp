@@ -229,6 +229,10 @@ std::shared_ptr<ASTStatement> ProgramParser::parseStmt(std::istream & input) {
    skipWhitespace(input);
    if (input.peek() == '=') {
       // Assignment statement, keyword is varname
+      // Validate keyword != this if in method body
+      if (_inside_method_body && keyword == "this") {
+         throw ParserException(std::string("Cannot write to this inside a method body"));
+      }
       // Skip =
       input.ignore();
       skipWhitespace(input);
@@ -533,6 +537,7 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
          input.ignore();
          break;
       }
+      _inside_method_body = true;
       std::shared_ptr<MethodDeclaration> method = parseMethod(input);
       methods.push_back(method);
    }
@@ -558,6 +563,7 @@ std::shared_ptr<ProgramDeclaration> ProgramParser::parse(std::istream & input) {
       }
    }
    // Okay, we must be at main
+   _inside_method_body = false;
    advanceAndExpectWord(input, "main", "Missing main program block");
    advanceAndExpectChar(input, ' ', "Program missing space after main");
    skipWhitespace(input);
