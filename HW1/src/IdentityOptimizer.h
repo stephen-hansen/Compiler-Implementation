@@ -51,7 +51,6 @@ class IdentityOptimizer : public CFGVisitor
       }
       void visit(SetEltPrimitive& node) {
          _new_block->appendPrimitive(std::make_shared<SetEltPrimitive>(
-                  node.lhs(),
                   node.arr(),
                   node.index(),
                   node.val()));

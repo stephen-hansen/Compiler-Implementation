@@ -30,7 +30,7 @@ void CFGBuilder::visit(ArithmeticExpression& node) {
    std::string r2 = p2.first;
    ReturnType rt2 = p2.second;
    _return_values.pop();
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tagged integer check on each operand
    // Only need to check if it's not an int
    if (rt1 != INTEGER) {
@@ -94,7 +94,7 @@ void CFGBuilder::visit(CallExpression& node) {
    std::string receiver = _return_values.top().first;
    ReturnType receivertype = _return_values.top().second;
    _return_values.pop();
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tag check obj is pointer
    if (receivertype != POINTER) {
       tagCheck(receiver, false, BADPOINTER, NOT_A_POINTER);
@@ -121,7 +121,7 @@ void CFGBuilder::visit(FieldReadExpression& node) {
    std::string baseaddr = _return_values.top().first;
    ReturnType basetype = _return_values.top().second;
    _return_values.pop();
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tag check obj is pointer
    if (basetype != POINTER) {
       tagCheck(baseaddr, false, BADPOINTER, NOT_A_POINTER);
@@ -145,7 +145,7 @@ void CFGBuilder::visit(FieldReadExpression& node) {
 }
 
 void CFGBuilder::visit(NewObjectExpression& node) {
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Get the return value early so we can alloc at it
    std::string ret = setReturnName(POINTER);
    // Get size to allocate
@@ -176,7 +176,7 @@ void CFGBuilder::visit(AssignmentStatement& node) {
    // Set destRegister as input value
    _input_values.push(destRegister);
    // Visit expression
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    node.val()->accept(*this);
    // Get return value
    // This should either be the destRegister pushed in, if it was satisfied by the expression
@@ -194,7 +194,7 @@ void CFGBuilder::visit(DontCareAssignmentStatement& node) {
    // And don't need to make an assignment primitive either
    // Still need a dest though for most statements, so push TEMP up
    _input_values.push(TEMP);
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    node.val()->accept(*this);
    // Don't care about return value
    _return_values.pop();
@@ -207,7 +207,7 @@ void CFGBuilder::visit(FieldUpdateStatement& node) {
    std::string baseaddr = _return_values.top().first;
    ReturnType basetype = _return_values.top().second;
    _return_values.pop();
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Tag check obj is pointer
    if (basetype != POINTER) {
       tagCheck(baseaddr, false, BADPOINTER, NOT_A_POINTER);
@@ -230,10 +230,7 @@ void CFGBuilder::visit(FieldUpdateStatement& node) {
    node.val()->accept(*this);
    std::string val = _return_values.top().first;
    _return_values.pop();
-   // Call setelt, send result to temporary
-   // Field update result is never used in original syntax
-   std::string temp = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<SetEltPrimitive>(temp, baseaddr, fieldOffset, val));
+   _curr_block->appendPrimitive(std::make_shared<SetEltPrimitive>(baseaddr, fieldOffset, val));
 }
 
 void CFGBuilder::visit(IfElseStatement& node) {
@@ -260,7 +257,7 @@ void CFGBuilder::visit(IfElseStatement& node) {
    // If block owns false block
    addNewChild(_curr_block, false_block);
    // End current block with if/else
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
@@ -333,7 +330,7 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
    // If block owns false block
    addNewChild(_curr_block, false_block);
    // End current block with if/else
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
@@ -385,7 +382,7 @@ void CFGBuilder::visit(WhileStatement& node) {
    // curr block owns false block
    addNewChild(_curr_block, false_block);
    // End current block with if/else
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
@@ -413,7 +410,7 @@ void CFGBuilder::visit(ReturnStatement& node) {
    std::string retValue = _return_values.top().first;
    _return_values.pop();
    // Update current block with return control
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    _curr_block->setControl(std::make_shared<RetControl>(retValue));
    // Create new block so that we don't override control
    std::shared_ptr<BasicBlock> next_block = std::make_shared<BasicBlock>("unreachable");
@@ -431,7 +428,7 @@ void CFGBuilder::visit(PrintStatement& node) {
    ReturnType retType = _return_values.top().second;
    // Print should probably do a tag check and de-convert the value by dividing by 2
    _return_values.pop();
-   _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
+   // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    if (retType != INTEGER) {
       tagCheck(retValue, true, BADNUMBER, NOT_A_NUMBER);  
    }

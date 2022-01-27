@@ -105,8 +105,7 @@ class SSAOptimizer : public IdentityOptimizer
          std::string arr = adjustRHSVariable(node.arr());
          std::string index = adjustRHSVariable(node.index());
          std::string val = adjustRHSVariable(node.val());
-         std::string lhs = adjustLHSVariable(node.lhs());
-         _new_block->appendPrimitive(std::make_shared<SetEltPrimitive>(lhs, arr, index, val));
+         _new_block->appendPrimitive(std::make_shared<SetEltPrimitive>(arr, index, val));
       }
       void visit(LoadPrimitive& node) {
          std::string addr = adjustRHSVariable(node.addr());

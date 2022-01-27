@@ -105,11 +105,10 @@ class ArithmeticOptimizer : public IdentityOptimizer
          _new_block->appendPrimitive(std::make_shared<GetEltPrimitive>(lhs, arr, index));
       }
       void visit(SetEltPrimitive& node) {
-         std::string lhs = node.lhs();
          std::string arr = adjustTemp(node.arr());
          std::string index = adjustTemp(node.index());
          std::string val = adjustTemp(node.val());
-         _new_block->appendPrimitive(std::make_shared<SetEltPrimitive>(lhs, arr, index, val));
+         _new_block->appendPrimitive(std::make_shared<SetEltPrimitive>(arr, index, val));
       }
       void visit(LoadPrimitive& node) {
          std::string lhs = node.lhs();

@@ -5,58 +5,58 @@ global array vtblB: { mB }
 global array fieldsB: { 0, 2 }
 code:
 
-mA(%this):
-  %1 = %this & 1
+mA(%this0):
+  %1 = %this0 & 1
   if %1 then badpointer1 else l1
 badpointer1:
   fail NotAPointer
 l1:
-  %2 = %this + 8
+  %2 = %this0 + 8
   %3 = load(%2)
   %4 = getelt(%3, 0)
   if %4 then l2 else badfield1
 l2:
-  %5 = getelt(%this, %4)
+  %5 = getelt(%this0, %4)
   ret %5
 badfield1:
   fail NoSuchField
 
-mB(%this):
+mB(%this0):
   ret 1
 
 main:
-  %x = 1
-  %x = alloc(3)
-  store(%x, @vtblA)
-  %1 = %x + 8
+  %x0 = 1
+  %x1 = alloc(3)
+  store(%x1, @vtblA)
+  %1 = %x1 + 8
   store(%1, @fieldsA)
-  %2 = %x & 1
+  %2 = %x1 & 1
   if %2 then badpointer2 else l3
 badpointer2:
   fail NotAPointer
 l3:
-  %3 = %x + 8
+  %3 = %x1 + 8
   %4 = load(%3)
   %5 = getelt(%4, 0)
   if %5 then l4 else badfield2
 l4:
-  %6 = setelt(%x, %5, 7)
-  %7 = %x & 1
-  if %7 then badpointer3 else l5
+  setelt(%x1, %5, 7)
+  %6 = %x1 & 1
+  if %6 then badpointer3 else l5
 badpointer3:
   fail NotAPointer
 l5:
-  %8 = load(%x)
-  %9 = getelt(%8, 0)
-  if %9 then l6 else badmethod1
+  %7 = load(%x1)
+  %8 = getelt(%7, 0)
+  if %8 then l6 else badmethod1
 l6:
-  %10 = call(%9, %x)
-  %11 = %10 & 1
-  if %11 then l7 else badnumber1
+  %9 = call(%8, %x1)
+  %10 = %9 & 1
+  if %10 then l7 else badnumber1
 l7:
-  %12 = %10 / 2
-  print(%12)
-  ret 1
+  %11 = %9 / 2
+  print(%11)
+  ret 0
 badnumber1:
   fail NotANumber
 badmethod1:

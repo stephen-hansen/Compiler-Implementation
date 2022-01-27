@@ -296,22 +296,19 @@ class GetEltPrimitive : public PrimitiveStatement
 class SetEltPrimitive : public PrimitiveStatement
 {
    private:
-      std::string _lhs;
       std::string _arr;
       std::string _index;
       std::string _val;
    public:
-      SetEltPrimitive(std::string lhs, std::string arr, std::string index, std::string val):
-         _lhs(lhs),
+      SetEltPrimitive(std::string arr, std::string index, std::string val):
          _arr(arr),
          _index(index),
          _val(val) {}
-      std::string lhs() { return _lhs; }
       std::string arr() { return _arr; }
       std::string index() { return _index; }
       std::string val() { return _val; }
       std::string toString() override {
-         return _lhs + " = setelt(" + _arr + ", " + _index + ", " + _val + ")";
+         return std::string("setelt(") + _arr + ", " + _index + ", " + _val + ")";
       }
       void accept(CFGVisitor& v) override {
          v.visit(*this);
