@@ -161,6 +161,10 @@ void CFGBuilder::visit(NewObjectExpression& node) {
    _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(fieldMapAddr, ret, '+', "8"));
    // Store the field map
    _curr_block->appendPrimitive(std::make_shared<StorePrimitive>(fieldMapAddr, toGlobal(toFieldMap(classname))));
+   // Set all fields to tagged 0
+   for (unsigned int i=0; i<_class_name_to_num_fields[classname]; i++) {
+      _curr_block->appendPrimitive(std::make_shared<SetEltPrimitive>(ret, std::to_string(i+2), std::to_string(tag(0))));
+   }
 }
 
 void CFGBuilder::visit(ThisObjectExpression& node) {
@@ -516,6 +520,7 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
       // Build map of class names to allocation sizes
       // Size is always 2 + number of fields
       _class_name_to_alloc_size[c->name()] = 2 + c->fields().size();
+      _class_name_to_num_fields[c->name()] = c->fields().size();
       // Build field map
       for (auto & f : c->fields()) {
          if (!_field_to_map_offset.count(f)) {

@@ -35,6 +35,7 @@ class CFGBuilder : public ASTVisitor
    private:
       std::map<std::string, unsigned long> _name_counter;
       std::map<std::string, unsigned long> _class_name_to_alloc_size;
+      std::map<std::string, unsigned long> _class_name_to_num_fields;
       std::map<std::string, unsigned long> _field_to_map_offset;
       std::map<std::string, unsigned long> _method_to_vtable_offset;
       std::stack<std::pair<std::string, ReturnType>> _return_values;
