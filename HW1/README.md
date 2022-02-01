@@ -73,6 +73,19 @@ which both removes intermediate computation in large constant
 evaluation as well as removes unnecessary tagging and
 de-tagging for constants.
 
+Note that the optimization assumes nothing about SSA so
+variables like x0 will be set but variables that use x0
+later will not replace x0 with the constant expression.
+A future optimizer which optimizes based on the SSA results
+may change this in a future milestone. For now we assume
+that the compound statements we are optimizing are only
+chained together by temporaries, meaning that this only
+optimizes compound statements that make up a single
+expression (i.e. `y = (1 + 2)` may be optimized to `y = 3`, 
+but `x = 1` followed by `y = x + 2` will not optimize to
+`y = 3`). The optimization is very basic in other words
+and only operates on the compound expressions.
+
 ### Example Programs
 
 See `testopt<N>.441` where `<N>` is a number to see various
@@ -81,6 +94,13 @@ Output IR is provided as `testopt<N>_noopt.ir` for the IR with
 `-noopt` enabled and `testopt<N>_opt.ir` for the IR with the
 peephole optimization enabled. Performance metrics are provided
 below.
+
+```
+testopt1_noopt.ir : ExecStats { fast_alu_ops: 15, slow_alu_ops: 5, conditional_branches: 1, unconditional_branches: 0, calls: 0, rets: 1, mem_reads: 0, mem_writes: 0, allocs: 0, prints: 1, phis: 0 } 
+testopt1_opt.ir   : ExecStats { fast_alu_ops: 3, slow_alu_ops: 1, conditional_branches: 1, unconditional_branches: 0, calls: 0, rets: 1, mem_reads: 0, mem_writes: 0, allocs: 0, prints: 1, phis: 0 } 
+testopt2_noopt.ir : ExecStats { fast_alu_ops: 29, slow_alu_ops: 33, conditional_branches: 11, unconditional_branches: 0, calls: 1, rets: 2, mem_reads: 7, mem_writes: 4, allocs: 1, prints: 3, phis: 0 }
+testopt2_opt.ir   : ExecStats { fast_alu_ops: 24, slow_alu_ops: 15, conditional_branches: 11, unconditional_branches: 0, calls: 1, rets: 2, mem_reads: 7, mem_writes: 4, allocs: 1, prints: 3, phis: 0 }
+```
 
 ### Where is Optimization Code
 

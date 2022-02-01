@@ -1,0 +1,98 @@
+data:
+global array vtblA: { mA }
+global array fieldsA: { 2 }
+code:
+
+mA(%this0, %a0):
+  %6 = %a0 & 1
+  if %6 then l1 else badnumber1
+l1:
+  %7 = %a0 / 2
+  %9 = %7 * 2
+  %10 = %9 * 2
+  %11 = %10 + 1
+  ret %11
+badnumber1:
+  fail NotANumber
+
+main:
+  %x0 = 1
+  %y0 = 1
+  %z0 = 1
+  %foo0 = 1
+  %x1 = 4194305
+  %foo1 = alloc(3)
+  store(%foo1, @vtblA)
+  %10 = %foo1 + 8
+  store(%10, @fieldsA)
+  setelt(%foo1, 2, 1)
+  %13 = %foo1 & 1
+  if %13 then badpointer1 else l2
+badpointer1:
+  fail NotAPointer
+l2:
+  %14 = load(%foo1)
+  %15 = getelt(%14, 0)
+  if %15 then l3 else badmethod1
+l3:
+  %y1 = call(%15, %foo1, 11)
+  %16 = %foo1 & 1
+  if %16 then badpointer2 else l4
+badpointer2:
+  fail NotAPointer
+l4:
+  %17 = %foo1 + 8
+  %18 = load(%17)
+  %19 = getelt(%18, 0)
+  if %19 then l5 else badfield1
+l5:
+  setelt(%foo1, %19, 11)
+  %20 = %foo1 & 1
+  if %20 then badpointer3 else l6
+badpointer3:
+  fail NotAPointer
+l6:
+  %21 = %foo1 + 8
+  %22 = load(%21)
+  %23 = getelt(%22, 0)
+  if %23 then l7 else badfield2
+l7:
+  %24 = getelt(%foo1, %23)
+  %30 = %24 & 1
+  if %30 then l8 else badnumber2
+l8:
+  %31 = %24 / 2
+  %33 = %31 * 25
+  %34 = %33 * 2
+  %z1 = %34 + 1
+  %35 = %x1 & 1
+  if %35 then l9 else badnumber3
+l9:
+  %36 = %x1 / 2
+  print(%36)
+  %37 = %y1 & 1
+  if %37 then l10 else badnumber4
+l10:
+  %38 = %y1 / 2
+  print(%38)
+  %39 = %z1 & 1
+  if %39 then l11 else badnumber5
+l11:
+  %40 = %z1 / 2
+  print(%40)
+  ret 0
+badnumber5:
+  fail NotANumber
+badnumber4:
+  fail NotANumber
+badnumber3:
+  fail NotANumber
+badnumber2:
+  fail NotANumber
+badfield2:
+  fail NoSuchField
+badfield1:
+  fail NoSuchField
+badmethod1:
+  fail NoSuchMethod
+

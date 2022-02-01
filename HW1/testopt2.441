@@ -1,0 +1,16 @@
+class A [
+   fields t
+   method m(a) with locals:
+   return (a * (2 / 1)) 
+]
+
+main with x, y, z, foo:
+x = ((2 * 1024) * 1024)
+foo = @A
+y = ^foo.m((10 - 5)) 
+!foo.t = 5
+z = (&foo.t * (5 * 5))
+print x
+print y
+print z
+

@@ -1,0 +1,15 @@
+data:
+code:
+
+main:
+  %x0 = 1
+  %x1 = 33
+  %17 = %x1 & 1
+  if %17 then l1 else badnumber1
+l1:
+  %18 = %x1 / 2
+  print(%18)
+  ret 0
+badnumber1:
+  fail NotANumber
+
