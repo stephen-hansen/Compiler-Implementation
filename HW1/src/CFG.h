@@ -18,6 +18,14 @@ inline std::string toRegister(std::string name) {
    return std::string("%") + name;
 }
 
+inline std::string toName(std::string reg) {
+   std::string name = reg;
+   if (reg.length() > 0 && reg[0] == '%') {
+      name.erase(0, 1);
+   }
+   return name;
+}
+
 inline std::string toGlobal(std::string name) {
    return std::string("@") + name;
 }
@@ -481,7 +489,7 @@ class BasicBlock
                if (i > 0) {
                   buf << ", ";
                }
-               buf << param;
+               buf << toName(param);
                i++;
             }
             buf << ")";
