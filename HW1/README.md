@@ -88,7 +88,7 @@ and only operates on the compound expressions.
 
 ### Example Programs
 
-See `testopt<N>.441` where `<N>` is a number to see various
+See `tests/testopt<N>.441` where `<N>` is a number to see various
 example source language inputs for testing the peephole optimization.
 Output IR is provided as `testopt<N>_noopt.ir` for the IR with
 `-noopt` enabled and `testopt<N>_opt.ir` for the IR with the
