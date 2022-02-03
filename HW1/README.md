@@ -146,4 +146,7 @@ value.
   at the start of the method. Since it was brought up in class that
   there will be NO testing with regard to invalid code, the parser
   was only written to check for basic syntax issues and nothing else.
+- All method locals and class fields are initialized to tagged 0.
+- By default if a method has no return statement we assume the method
+  returns literal (not tagged) 0.
 
