@@ -121,24 +121,25 @@ badnumber5:
 l14:
   jump l19
 l19:
-  %42 = %x1 & 1
+  %x2 = phi(l14, %x1, l24, %x3)
+  %42 = %x2 & 1
   if %42 then l20 else badnumber7
 l20:
-  %43 = %x1 / 2
+  %43 = %x2 / 2
   if %43 then l21 else l22
 l21:
-  %44 = %x1 & 1
+  %44 = %x2 & 1
   if %44 then l23 else badnumber8
 l23:
-  %45 = %x1 / 2
+  %45 = %x2 / 2
   print(%45)
-  %46 = %x1 & 1
+  %46 = %x2 & 1
   if %46 then l24 else badnumber9
 l24:
-  %47 = %x1 / 2
+  %47 = %x2 / 2
   %49 = %47 / 2
   %50 = %49 * 2
-  %x2 = %50 + 1
+  %x3 = %50 + 1
   jump l19
 badnumber9:
   fail NotANumber
@@ -147,6 +148,7 @@ badnumber8:
 l22:
   jump l25
 l25:
+  %x4 = phi(l17, %x1, l22, %x2)
   if 0 then l26 else l27
 l26:
   ret 7
@@ -176,14 +178,14 @@ l34:
   print(%60)
   jump l35
 l35:
-  %61 = %x1 & 1
+  %61 = %x4 & 1
   if %61 then l36 else badnumber14
 l36:
-  %62 = %x1 / 2
+  %62 = %x4 / 2
   if %62 then l37 else l38
 l37:
   print(1234)
-  ret %x1
+  ret %x4
 l38:
   print(5678)
   ret %y2

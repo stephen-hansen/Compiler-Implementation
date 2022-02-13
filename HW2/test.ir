@@ -1,0 +1,53 @@
+data:
+code:
+
+main:
+  %x0 = 1
+  %x1 = 1
+  print(0)
+  jump l1
+l1:
+  %2 = %x1 & 1
+  if %2 then l2 else badnumber1
+l2:
+  %3 = %x1 / 2
+  if %3 then l3 else l4
+l3:
+  print(1)
+  %5 = %x1 & 1
+  if %5 then l5 else badnumber2
+l5:
+  %6 = %x1 / 2
+  if %6 then l6 else l7
+l6:
+  print(2)
+  jump l12
+l7:
+  print(5)
+  %9 = %x1 & 1
+  if %9 then l8 else badnumber3
+l8:
+  %10 = %x1 / 2
+  if %10 then l9 else l10
+l9:
+  print(6)
+  jump l11
+l10:
+  print(8)
+  jump l11
+l11:
+  print(7)
+  jump l12
+l12:
+  print(3)
+  jump l1
+badnumber3:
+  fail NotANumber
+badnumber2:
+  fail NotANumber
+l4:
+  print(4)
+  ret 0
+badnumber1:
+  fail NotANumber
+

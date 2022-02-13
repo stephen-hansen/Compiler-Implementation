@@ -20,7 +20,7 @@ class BetterSSAHelper : public CFGVisitor
 
       void updateGlobalsAndBlocks(std::vector<std::string> rhs) {
          for (const auto& r : rhs) {
-            if (isVariable(r) && (_varkill.find(r) != _varkill.end())) {
+            if (isVariable(r) && (_varkill.find(r) == _varkill.end())) {
                _globals.insert(r);
             }
          }
@@ -107,16 +107,18 @@ class BetterSSAHelper : public CFGVisitor
          for (const auto & x : _globals) {
             if (_var_to_blocks.find(x) != _var_to_blocks.end()) {
                std::set<std::string> worklist = _var_to_blocks[x];
-               std::set<std::string> next_worklist = std::set<std::string>({});
                while (worklist.size() > 0) {
+                  std::set<std::string> next_worklist = std::set<std::string>({});
                   for (const auto & b : worklist) {
                      for (const auto & d : _curr_df[b]) {
-                        // Need phi-func for x in d
+                        // If d has no phi-func for x
                         if (_label_to_phi_variables.find(d) == _label_to_phi_variables.end()) {
                            _label_to_phi_variables[d] = std::set<std::string>({});
                         }
-                        _label_to_phi_variables[d].insert(x);
-                        next_worklist.insert(d);
+                        if (_label_to_phi_variables[d].find(x) == _label_to_phi_variables[d].end()) {
+                           _label_to_phi_variables[d].insert(x);
+                           next_worklist.insert(d);
+                        }
                      }
                   }
                   worklist = next_worklist;

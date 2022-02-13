@@ -123,7 +123,8 @@ class DominatorSolver
          std::map<std::string, std::shared_ptr<BasicBlock>> blockmap = solveBlockmap(method);
          std::map<std::string, std::set<std::string>> dom = solveDom(blockmap, method);
          std::map<std::string, std::string> idom = solveIDom(dom, method);
-         return solveDF(idom, blockmap);
+         std::map<std::string, std::set<std::string>> df = solveDF(idom, blockmap);
+         return df;
       }
 
 };
