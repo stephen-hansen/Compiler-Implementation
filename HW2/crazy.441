@@ -1,0 +1,46 @@
+class FOO [
+   fields a, b, c, d;
+   method m1(x, y, z) with locals p, q:
+   !this.a = x
+   return 5
+]
+
+main with a, x, y, z:
+a = @FOO
+!a.b = a
+x = 100
+y = 50
+z = 10
+z = (1 * (x - (^&a.b.m1(2,y,(z * 3)) / 4)))
+   if (z - 99): {
+      ifonly y: {
+         print z
+      }
+   } else {
+      while x: {
+         print x
+         x = (x / 2)
+      }
+   }
+if 0: {
+   return 3
+} else {
+   y = (y + 1)
+   print y
+}
+if 1: {
+   z = (z - 1)
+   print z
+} else {
+   return 2
+}
+if x: {
+   print 1234
+   return x
+} else {
+   print 5678
+   return y
+}
+print 99999
+return y
+z = (z * 2)

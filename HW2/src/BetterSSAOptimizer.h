@@ -45,8 +45,12 @@ class BetterSSAHelper : public CFGVisitor
          updateGlobalsAndBlocks(node.lhs(), { node.op1(), node.op2() });
       }
       void visit(CallPrimitive& node) {
-         std::vector<std::string> rhs = { node.codeaddr(), node.receiver() };
-         rhs.insert(rhs.end(), node.args().begin(), node.args().end());
+         std::vector<std::string> rhs;
+         std::vector<std::string> temp = { node.codeaddr(), node.receiver() };
+         std::vector<std::string> args = node.args();
+         rhs.reserve(temp.size() + args.size());
+         rhs.insert(rhs.end(), temp.begin(), temp.end());
+         rhs.insert(rhs.end(), args.begin(), args.end());
          updateGlobalsAndBlocks(node.lhs(), rhs);
       }
       // Do nothing on phi (should not have any)
