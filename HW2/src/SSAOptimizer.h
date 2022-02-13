@@ -6,7 +6,7 @@
 
 class SSAOptimizer : public IdentityOptimizer
 {
-   private:
+   protected:
       // LHS adjustments must be called before RHS adjustments
       // LHS will replace variable with + current version, but will increment current
       // version prior to replacement
@@ -33,7 +33,6 @@ class SSAOptimizer : public IdentityOptimizer
          }
          return reg;
       }
-   protected:
       // Map block label to counters mapping variable name to final version at end of block
       std::map<std::string, std::map<std::string, unsigned int>> _label_to_post_counters;
       std::map<std::string, std::map<std::string, unsigned int>> _label_to_pre_counters;

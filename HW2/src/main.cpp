@@ -1,11 +1,12 @@
 #include <iostream>
 #include "ArithmeticOptimizer.h"
+#include "BetterSSAOptimizer.h"
 #include "SSAOptimizer.h"
 #include "CFGBuilder.h"
 #include "Parser.h"
 
 int main(int argc, char ** argv) {
-   bool printAST = false, noSSA = false, noopt = false;
+   bool printAST = false, noSSA = false, noopt = false, simpleSSA = false;
    for (int i=0; i<argc; i++) {
       std::string arg = argv[i];
       if (arg == "-printAST") {
@@ -14,10 +15,13 @@ int main(int argc, char ** argv) {
          noSSA = true;
       } else if (arg == "-noopt") {
          noopt = true;
+      } else if (arg == "-simpleSSA") {
+         simpleSSA = true;
       }
    }
    ProgramParser parser;
    CFGBuilder builder;
+   BetterSSAOptimizer better_ssa_optimizer;
    SSAOptimizer ssa_optimizer;
    ArithmeticOptimizer peephole_optimizer;
    try {
@@ -28,7 +32,11 @@ int main(int argc, char ** argv) {
       }
       std::shared_ptr<ProgramCFG> progCFG = builder.build(progAST);
       if (!noSSA) {
-         progCFG = ssa_optimizer.optimize(progCFG);
+         if (simpleSSA) {
+            progCFG = ssa_optimizer.optimize(progCFG);
+         } else {
+            progCFG = better_ssa_optimizer.optimize(progCFG);
+         }
       }
       if (!noopt) {
          progCFG = peephole_optimizer.optimize(progCFG);

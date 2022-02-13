@@ -3,7 +3,7 @@ STD=-std=c++17
 
 .PHONY : clean
 
-comp: src/main.cpp obj/Parser.o obj/CFGBuilder.o src/IdentityOptimizer.h src/ArithmeticOptimizer.h src/SSAOptimizer.h
+comp: src/main.cpp obj/Parser.o obj/CFGBuilder.o src/IdentityOptimizer.h src/ArithmeticOptimizer.h src/SSAOptimizer.h src/DominatorSolver.h src/BetterSSAOptimizer.h
 	${CC} ${STD} -o comp src/main.cpp obj/Parser.o obj/CFGBuilder.o
 
 obj/CFGBuilder.o: src/AST.h src/CFG.h src/CFGBuilder.h src/CFGBuilder.cpp
