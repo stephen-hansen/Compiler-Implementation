@@ -1,6 +1,11 @@
 class FOO [
    fields a, b, c, d;
    method m1(x, y, z) with locals p, q:
+   if 1: {
+      print 1
+   } else {
+      print 2
+   }
    !this.a = x
    return 5
 ]

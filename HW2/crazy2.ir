@@ -6,17 +6,25 @@ code:
 m1FOO(this0, x0, y0, z0):
   %p0 = 1
   %q0 = 1
-  %1 = %this0 & 1
-  if %1 then badpointer1 else l1
+  if 1 then l1 else l2
+l1:
+  print(1)
+  jump l3
+l2:
+  print(2)
+  jump l3
+l3:
+  %4 = %this0 & 1
+  if %4 then badpointer1 else l4
 badpointer1:
   fail NotAPointer
-l1:
-  %2 = %this0 + 8
-  %3 = load(%2)
-  %4 = getelt(%3, 0)
-  if %4 then l2 else badfield1
-l2:
-  setelt(%this0, %4, %x0)
+l4:
+  %5 = %this0 + 8
+  %6 = load(%5)
+  %7 = getelt(%6, 0)
+  if %7 then l5 else badfield1
+l5:
+  setelt(%this0, %7, %x0)
   ret 11
 badfield1:
   fail NoSuchField
@@ -35,57 +43,57 @@ main:
   setelt(%a1, 4, 1)
   setelt(%a1, 5, 1)
   %2 = %a1 & 1
-  if %2 then badpointer2 else l3
+  if %2 then badpointer2 else l6
 badpointer2:
   fail NotAPointer
-l3:
+l6:
   %3 = %a1 + 8
   %4 = load(%3)
   %5 = getelt(%4, 1)
-  if %5 then l4 else badfield2
-l4:
+  if %5 then l7 else badfield2
+l7:
   setelt(%a1, %5, %a1)
   %x1 = 201
   %y1 = 101
   %z1 = 21
   %6 = %z1 & 1
-  if %6 then l5 else badnumber1
-l5:
+  if %6 then l8 else badnumber1
+l8:
   %7 = %z1 / 2
   %9 = %7 * 3
   %10 = %9 * 2
   %11 = %10 + 1
   %12 = %a1 & 1
-  if %12 then badpointer3 else l6
+  if %12 then badpointer3 else l9
 badpointer3:
   fail NotAPointer
-l6:
+l9:
   %13 = %a1 + 8
   %14 = load(%13)
   %15 = getelt(%14, 1)
-  if %15 then l7 else badfield3
-l7:
+  if %15 then l10 else badfield3
+l10:
   %16 = getelt(%a1, %15)
   %17 = %16 & 1
-  if %17 then badpointer4 else l8
+  if %17 then badpointer4 else l11
 badpointer4:
   fail NotAPointer
-l8:
+l11:
   %18 = load(%16)
   %19 = getelt(%18, 0)
-  if %19 then l9 else badmethod1
-l9:
+  if %19 then l12 else badmethod1
+l12:
   %20 = call(%19, %16, 5, %y1, %11)
   %21 = %20 & 1
-  if %21 then l10 else badnumber2
-l10:
+  if %21 then l13 else badnumber2
+l13:
   %22 = %20 / 2
   %24 = %22 / 4
   %25 = %24 * 2
   %26 = %25 + 1
   %27 = %x1 & 1
-  if %27 then l11 else badnumber3
-l11:
+  if %27 then l14 else badnumber3
+l14:
   %28 = %x1 - %26
   %29 = %28 + 1
   %31 = %29 / 2
@@ -93,100 +101,100 @@ l11:
   %33 = %32 * 2
   %z2 = %33 + 1
   %34 = %z2 & 1
-  if %34 then l12 else badnumber4
-l12:
+  if %34 then l15 else badnumber4
+l15:
   %35 = %z2 - 199
   %36 = %35 + 1
   %37 = %36 / 2
-  if %37 then l13 else l14
-l13:
-  %38 = %y1 & 1
-  if %38 then l15 else badnumber5
-l15:
-  %39 = %y1 / 2
-  if %39 then l16 else l17
+  if %37 then l16 else l17
 l16:
-  %40 = %z2 & 1
-  if %40 then l18 else badnumber6
+  %38 = %y1 & 1
+  if %38 then l18 else badnumber5
 l18:
+  %39 = %y1 / 2
+  if %39 then l19 else l20
+l19:
+  %40 = %z2 & 1
+  if %40 then l21 else badnumber6
+l21:
   %41 = %z2 / 2
   print(%41)
-  jump l17
+  jump l20
 badnumber6:
   fail NotANumber
-l17:
-  jump l25
+l20:
+  jump l28
 badnumber5:
   fail NotANumber
-l14:
-  jump l19
-l19:
-  %x2 = phi(l14, %x1, l24, %x3)
+l17:
+  jump l22
+l22:
+  %x2 = phi(l17, %x1, l27, %x3)
   %42 = %x2 & 1
-  if %42 then l20 else badnumber7
-l20:
-  %43 = %x2 / 2
-  if %43 then l21 else l22
-l21:
-  %44 = %x2 & 1
-  if %44 then l23 else badnumber8
+  if %42 then l23 else badnumber7
 l23:
+  %43 = %x2 / 2
+  if %43 then l24 else l25
+l24:
+  %44 = %x2 & 1
+  if %44 then l26 else badnumber8
+l26:
   %45 = %x2 / 2
   print(%45)
   %46 = %x2 & 1
-  if %46 then l24 else badnumber9
-l24:
+  if %46 then l27 else badnumber9
+l27:
   %47 = %x2 / 2
   %49 = %47 / 2
   %50 = %49 * 2
   %x3 = %50 + 1
-  jump l19
+  jump l22
 badnumber9:
   fail NotANumber
 badnumber8:
   fail NotANumber
-l22:
-  jump l25
 l25:
-  %x4 = phi(l17, %x1, l22, %x2)
-  if 0 then l26 else l27
-l26:
-  ret 7
-l27:
-  %52 = %y1 & 1
-  if %52 then l28 else badnumber10
+  jump l28
 l28:
+  %x4 = phi(l20, %x1, l25, %x2)
+  if 0 then l29 else l30
+l29:
+  ret 7
+l30:
+  %52 = %y1 & 1
+  if %52 then l31 else badnumber10
+l31:
   %y2 = %y1 + 2
   %54 = %y2 & 1
-  if %54 then l29 else badnumber11
-l29:
+  if %54 then l32 else badnumber11
+l32:
   %55 = %y2 / 2
   print(%55)
-  jump l30
-l30:
-  if 1 then l31 else l32
-l31:
-  %57 = %z2 & 1
-  if %57 then l33 else badnumber12
+  jump l33
 l33:
+  if 1 then l34 else l35
+l34:
+  %57 = %z2 & 1
+  if %57 then l36 else badnumber12
+l36:
   %58 = %z2 - 3
   %z3 = %58 + 1
   %59 = %z3 & 1
-  if %59 then l34 else badnumber13
-l34:
+  if %59 then l37 else badnumber13
+l37:
   %60 = %z3 / 2
   print(%60)
-  jump l35
-l35:
+  jump l38
+l38:
   %61 = %x4 & 1
-  if %61 then l36 else badnumber14
-l36:
+  if %61 then l39 else badnumber14
+l39:
   %62 = %x4 / 2
-  if %62 then l37 else l38
-l37:
+  if %62 then l40 else l41
+l40:
   print(1234)
   ret %x4
-l38:
+l41:
   print(5678)
   ret %y2
 badnumber14:
@@ -195,7 +203,7 @@ badnumber13:
   fail NotANumber
 badnumber12:
   fail NotANumber
-l32:
+l35:
   ret 5
 badnumber11:
   fail NotANumber
