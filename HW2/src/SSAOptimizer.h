@@ -140,6 +140,12 @@ class SSAOptimizer : public IdentityOptimizer
          buildWeakChildConns(node);
       }
       void visit(BasicBlock& node) {
+         // Set params to version "zero"
+         for (auto & p : node.params()) {
+            if (isVariable(p) && !_global_counters.count(p)) {
+               _global_counters[p] = 0;
+            }
+         }
          _label_to_method[node.label()] = _new_method;
          std::vector<std::string> variables = _new_method->variables();
          std::map<std::string, unsigned int> pre_counters;

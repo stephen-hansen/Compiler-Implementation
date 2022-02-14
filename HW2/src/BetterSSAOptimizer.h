@@ -159,6 +159,12 @@ class BetterSSAOptimizer : public SSAOptimizer
       std::map<std::string, std::set<std::string>> _label_to_phi_variables;
    public:
       void visit(BasicBlock& node) {
+         // Set params to version "zero"
+         for (auto & p : node.params()) {
+            if (isVariable(p) && !_global_counters.count(p)) {
+               _global_counters[p] = 0;
+            }
+         }
          std::string label = node.label();
          _label_to_method[label] = _new_method;
          std::vector<std::string> variables = _new_method->variables();
