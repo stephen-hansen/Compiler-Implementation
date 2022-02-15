@@ -6,6 +6,18 @@
 #include <set>
 #include "CFG.h"
 
+class DomTreeNode
+{
+   private:
+      std::shared_ptr<BasicBlock> _block;
+      std::vector<std::shared_ptr<DomTreeNode>> _children;
+   public:
+      DomTreeNode(std::shared_ptr<BasicBlock> block): _block(block) {}
+      std::shared_ptr<BasicBlock> block() { return _block; }
+      void addChild(std::shared_ptr<DomTreeNode> child) { _children.push_back(child); }
+      std::vector<std::shared_ptr<DomTreeNode>> children() { return _children; }
+};
+
 class DominatorSolver
 {
    private:
@@ -125,6 +137,26 @@ class DominatorSolver
          std::map<std::string, std::string> idom = solveIDom(dom, method);
          std::map<std::string, std::set<std::string>> df = solveDF(idom, blockmap);
          return df;
+      }
+
+      std::shared_ptr<DomTreeNode> solveTree(std::shared_ptr<MethodCFG> method) {
+         std::string rootLabel = method->first_block()->label();
+         std::map<std::string, std::shared_ptr<BasicBlock>> blockmap = solveBlockmap(method);
+         std::map<std::string, std::set<std::string>> dom = solveDom(blockmap, method);
+         std::map<std::string, std::string> idom = solveIDom(dom, method);
+         std::map<std::string, std::shared_ptr<DomTreeNode>> treeNodes;
+         // Convert basic blocks to dominator tree blocks
+         for (const auto& kv : blockmap) {
+            treeNodes[kv.first] = std::make_shared<DomTreeNode>(kv.second);
+         }
+         // IDom(b) = n means n is parent of b
+         for (const auto& kv : idom) {
+            std::string b = kv.first;
+            std::string n = kv.second;
+            treeNodes[n]->addChild(treeNodes[b]);
+         }
+         // Return root node
+         return treeNodes[rootLabel];
       }
 
 };
