@@ -1,6 +1,7 @@
 #ifndef _CS_441_VALUE_NUMBER_OPTIMIZER_H
 #define _CS_441_VALUE_NUMBER_OPTIMIZER_H
 #include <map>
+#include <stack>
 #include <vector>
 #include "CFG.h"
 #include "DominatorSolver.h"
@@ -13,7 +14,9 @@ class ValueNumberOptimizer : public IdentityOptimizer
 {
    private:
       std::map<std::pair<char, std::vector<std::string>>, std::string> _hashtable;
+      std::stack<std::map<std::pair<char, std::vector<std::string>>, std::string>> _htstack;
       std::map<std::string, std::string> _vn;
+      std::map<std::string, std::shared_ptr<DomTreeNode>> _domtree;
       std::string getVN(std::string rhs) {
          if (_vn.find(rhs) == _vn.end()) {
             _vn[rhs] = rhs;
@@ -23,7 +26,6 @@ class ValueNumberOptimizer : public IdentityOptimizer
    public:
       // Comment doesn't need adjustment
       void visit(AssignmentPrimitive& node) {
-         // TODO handle
          // Check if expr is in hash table
          std::string rhs = getVN(node.rhs());
          std::vector<std::string> arg = { rhs };
@@ -45,7 +47,6 @@ class ValueNumberOptimizer : public IdentityOptimizer
          } 
       }
       void visit(ArithmeticPrimitive& node) {
-         // TODO handle
          char op = node.op();
          std::string op1 = getVN(node.op1());
          std::string op2 = getVN(node.op2());
@@ -205,13 +206,73 @@ class ValueNumberOptimizer : public IdentityOptimizer
       void visit(IfElseControl& node) {
          _new_block->setControl(std::make_shared<IfElseControl>(getVN(node.cond()), node.if_branch(), node.else_branch()));
       }
-
+      void optimizeChild(BasicBlock& node, std::shared_ptr<BasicBlock>& c) {
+         std::string label = node.label();
+         std::string child_label = c->label();
+         if (!_label_to_block.count(child_label)) {
+            _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, c->params());
+         }
+         addNewChild(_label_to_block[label], _label_to_block[child_label]);
+         // DO NOT OPTIMIZE CHILD DIRECTLY
+         // TODO ADJUST PHI FUNC INPUTS
+      }
+      void visit(BasicBlock& node) {
+         // This will do a copy on assignment
+         _hashtable = _htstack.top();
+         // Optimize with current table
+         optimizeBlock(node);
+         optimizeChildren(node); 
+         // TODO directly update children phi nodes
+         // Need to traverse using dominator tree
+         std::shared_ptr<DomTreeNode> domnode = _domtree[node.label()];
+         std::vector<std::shared_ptr<DomTreeNode>> children = domnode->children();
+         // Push the modified table onto the stack
+         _htstack.push(_hashtable);
+         for (const auto& child : children) {
+            std::shared_ptr<BasicBlock> block = child->block();
+            block->accept(*this);
+         }
+         // Clean up hash table
+         // Remove current level
+         _htstack.pop();
+      }
       void visit(MethodCFG& node) {
          // Clear VN, hash table
          _vn.clear();
          _hashtable.clear();
          // Call parent method to optimize
          IdentityOptimizer::visit(node);
+      }
+      void visit(ClassCFG& node) {
+         std::string name = node.name();
+         std::vector<std::string> vtable = node.vtable();
+         std::vector<unsigned long> field_table = node.field_table();
+         // Create new class
+         _new_class = std::make_shared<ClassCFG>(name, vtable, field_table);
+         // Optimize every method
+         std::vector<std::shared_ptr<MethodCFG>> methods = node.methods();
+         for (auto & m : methods) {
+            DominatorSolver ds;
+            _domtree = ds.solveTree(m);
+            m->accept(*this);
+            _new_class->appendMethod(_new_method);
+         }
+      }
+      void visit(ProgramCFG& node) {
+         std::shared_ptr<MethodCFG> main = node.main_method();
+         DominatorSolver ds;
+         _domtree = ds.solveTree(main);
+         // Optimize main
+         main->accept(*this);
+         // Set main method
+         _new_prog = std::make_shared<ProgramCFG>(_new_method);
+         // Get classes
+         std::map<std::string, std::shared_ptr<ClassCFG>> classes = node.classes();
+         // Optimize each and append
+         for (auto & kv : classes) {
+            kv.second->accept(*this);
+            _new_prog->appendClass(_new_class);
+         }
       }
 };
 

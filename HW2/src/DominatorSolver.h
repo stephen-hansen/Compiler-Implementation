@@ -139,8 +139,7 @@ class DominatorSolver
          return df;
       }
 
-      std::shared_ptr<DomTreeNode> solveTree(std::shared_ptr<MethodCFG> method) {
-         std::string rootLabel = method->first_block()->label();
+      std::map<std::string, std::shared_ptr<DomTreeNode>> solveTree(std::shared_ptr<MethodCFG> method) {
          std::map<std::string, std::shared_ptr<BasicBlock>> blockmap = solveBlockmap(method);
          std::map<std::string, std::set<std::string>> dom = solveDom(blockmap, method);
          std::map<std::string, std::string> idom = solveIDom(dom, method);
@@ -155,8 +154,8 @@ class DominatorSolver
             std::string n = kv.second;
             treeNodes[n]->addChild(treeNodes[b]);
          }
-         // Return root node
-         return treeNodes[rootLabel];
+         // Return all nodes
+         return treeNodes;
       }
 
 };
