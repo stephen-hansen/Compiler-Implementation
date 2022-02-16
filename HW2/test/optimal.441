@@ -1,8 +1,10 @@
 
 main with x, y, z:
-    x = (4 + 5)
-    x = 73
-    y = (4 + 5)
-    print(y)
-    z = (4 + 5)
-    print(z)
+    x = 7
+    if 1: {
+      x = 8
+    } else {
+      x = 9
+    }
+    print(x)
+

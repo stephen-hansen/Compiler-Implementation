@@ -396,7 +396,14 @@ class ValueNumberOptimizer : public IdentityOptimizer
          std::vector<std::shared_ptr<DomTreeNode>> children = domnode->children();
          // Push the modified table onto the stack
          _htstack.push(_hashtable);
+         std::vector<std::shared_ptr<DomTreeNode>> acceptable_children;
+         // Only keep non-pruned blocks
          for (const auto& child : children) {
+            if (_prunelabels.find(child->block()->label()) == _prunelabels.end()) {
+               acceptable_children.push_back(child);
+            }
+         }
+         for (const auto& child : acceptable_children) {
             std::shared_ptr<BasicBlock> block = child->block();
             block->accept(*this);
          }

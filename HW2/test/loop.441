@@ -13,6 +13,7 @@ class STACK [
       tmp = @LISTNODE
       !tmp.val = v
       !tmp.next = &this.list
+      !tmp.isnull = 0
       !this.list = tmp
       return 0
    method pop() with locals tmp:
