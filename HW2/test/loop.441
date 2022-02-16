@@ -1,50 +1,48 @@
-# Slightly more complex stack use, with a loop.
-# In the *second* loop, the tag check on the stack should be removed, because the loop body is dominated by the tag check for the initial pre-loop pop
-# In the *first* loop, the tag check must stay, because the first loop is not dominated by a tag check on the stack reference.
-# Code motion could move the tag check from inside the loop to outside, but recall that GVN does not move evaluations, it only replaces redundant computations with references to earlier results
-# Note: the reason the stack manipulation was moved into a method was explicitly to hide dominance of the first loop by a tag check. If we left the loops in main, then both loops *would* be dominated by the pointer check arising from initializing stk.list to 0.
-
-class ListNode [
-    fields val, next
-    method getNext() with locals:
-        return &this.next
-    method getVal() with locals:
-        return &this.val
+class LISTNODE [
+   fields val, next, isnull
+   method getNext() with locals:
+      return &this.next
+   method getVal() with locals:
+      return &this.val
+   method isNull() with locals:
+      return &this.isnull
 ]
-class Stack [
-    fields list
-    method push(v) with locals tmp:
-        tmp = @ListNode
-	!tmp.val = v
-	!tmp.next = &this.list
-	!this.list = tmp
-	return 0
-    method pop() with locals tmp:
-        if (&this.list == 0): {
-            return 0
-        } else {
-            tmp = ^this.getVal()
-            !this.list = ^this.getNext()
-            return tmp
-        }
+class STACK [
+   fields list
+   method push(v) with locals tmp:
+      tmp = @LISTNODE
+      !tmp.val = v
+      !tmp.next = &this.list
+      !this.list = tmp
+      return 0
+   method pop() with locals tmp:
+      if ^&this.list.isNull(): {
+         return 0
+      } else {
+         tmp = ^&this.list.getVal()
+         !this.list = ^&this.list.getNext()
+         return tmp
+      }
 ]
-class Stacker [
-    fields
-    method do(stk) with locals x, v:
-        x = 20
-        while (x > 0): {
-            stk.push(x)
-            x = (x - 1)
-        }
-        v = ^stk.pop()
-        while (v != 0): {
-            print(v)
-            v = ^stk.pop()
-        }
-
-main with stk, stkr:
-    stk = @Stack
-    !stk.list = 0
-    stkr = @Stacker
-    _ = ^stkr.do(stk)
+class STACKER [
+   fields
+   method do(stk) with locals x, v:
+      x = 20
+      while x: {
+         _ = ^stk.push(x)
+         x = (x - 1)
+      }
+      v = ^stk.pop()
+      while v: {
+         print(v)
+         v = ^stk.pop()
+      }
+]
+main with node, stk, stkr:
+   stk = @STACK
+   node = @LISTNODE
+   !node.isnull = 1
+   !stk.list = node
+   stkr = @STACKER
+   _ = ^stkr.do(stk)
 

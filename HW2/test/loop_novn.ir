@@ -1,0 +1,361 @@
+data:
+global array vtblLISTNODE: { getNextLISTNODE, getValLISTNODE, isNullLISTNODE, 0, 0, 0 }
+global array fieldsLISTNODE: { 2, 3, 4, 0 }
+global array vtblSTACK: { 0, 0, 0, pushSTACK, popSTACK, 0 }
+global array fieldsSTACK: { 0, 0, 0, 2 }
+global array vtblSTACKER: { 0, 0, 0, 0, 0, doSTACKER }
+global array fieldsSTACKER: { 0, 0, 0, 0 }
+code:
+
+getNextLISTNODE(this0):
+  %1 = %this0 & 1
+  if %1 then badpointer1 else l1
+badpointer1:
+  fail NotAPointer
+l1:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 1)
+  if %4 then l2 else badfield1
+l2:
+  %5 = getelt(%this0, %4)
+  ret %5
+badfield1:
+  fail NoSuchField
+getValLISTNODE(this0):
+  %1 = %this0 & 1
+  if %1 then badpointer2 else l3
+badpointer2:
+  fail NotAPointer
+l3:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 0)
+  if %4 then l4 else badfield2
+l4:
+  %5 = getelt(%this0, %4)
+  ret %5
+badfield2:
+  fail NoSuchField
+isNullLISTNODE(this0):
+  %1 = %this0 & 1
+  if %1 then badpointer3 else l5
+badpointer3:
+  fail NotAPointer
+l5:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 2)
+  if %4 then l6 else badfield3
+l6:
+  %5 = getelt(%this0, %4)
+  ret %5
+badfield3:
+  fail NoSuchField
+
+pushSTACK(this0, v0):
+  %tmp0 = 1
+  %tmp1 = alloc(5)
+  store(%tmp1, @vtblLISTNODE)
+  %1 = %tmp1 + 8
+  store(%1, @fieldsLISTNODE)
+  setelt(%tmp1, 2, 1)
+  setelt(%tmp1, 3, 1)
+  setelt(%tmp1, 4, 1)
+  %2 = %tmp1 & 1
+  if %2 then badpointer4 else l7
+badpointer4:
+  fail NotAPointer
+l7:
+  %3 = %tmp1 + 8
+  %4 = load(%3)
+  %5 = getelt(%4, 0)
+  if %5 then l8 else badfield4
+l8:
+  setelt(%tmp1, %5, %v0)
+  %6 = %tmp1 & 1
+  if %6 then badpointer5 else l9
+badpointer5:
+  fail NotAPointer
+l9:
+  %7 = %tmp1 + 8
+  %8 = load(%7)
+  %9 = getelt(%8, 1)
+  if %9 then l10 else badfield5
+l10:
+  %10 = %this0 & 1
+  if %10 then badpointer6 else l11
+badpointer6:
+  fail NotAPointer
+l11:
+  %11 = %this0 + 8
+  %12 = load(%11)
+  %13 = getelt(%12, 3)
+  if %13 then l12 else badfield6
+l12:
+  %14 = getelt(%this0, %13)
+  setelt(%tmp1, %9, %14)
+  %15 = %this0 & 1
+  if %15 then badpointer7 else l13
+badpointer7:
+  fail NotAPointer
+l13:
+  %16 = %this0 + 8
+  %17 = load(%16)
+  %18 = getelt(%17, 3)
+  if %18 then l14 else badfield7
+l14:
+  setelt(%this0, %18, %tmp1)
+  ret 1
+badfield7:
+  fail NoSuchField
+badfield6:
+  fail NoSuchField
+badfield5:
+  fail NoSuchField
+badfield4:
+  fail NoSuchField
+popSTACK(this0):
+  %tmp0 = 1
+  %1 = %this0 & 1
+  if %1 then badpointer8 else l15
+badpointer8:
+  fail NotAPointer
+l15:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 3)
+  if %4 then l16 else badfield8
+l16:
+  %5 = getelt(%this0, %4)
+  %6 = %5 & 1
+  if %6 then badpointer9 else l17
+badpointer9:
+  fail NotAPointer
+l17:
+  %7 = load(%5)
+  %8 = getelt(%7, 2)
+  if %8 then l18 else badmethod1
+l18:
+  %9 = call(%8, %5)
+  %10 = %9 & 1
+  if %10 then l19 else badnumber1
+l19:
+  %11 = %9 / 2
+  if %11 then l20 else l21
+l20:
+  ret 1
+l21:
+  %12 = %this0 & 1
+  if %12 then badpointer10 else l22
+badpointer10:
+  fail NotAPointer
+l22:
+  %13 = %this0 + 8
+  %14 = load(%13)
+  %15 = getelt(%14, 3)
+  if %15 then l23 else badfield9
+l23:
+  %16 = getelt(%this0, %15)
+  %17 = %16 & 1
+  if %17 then badpointer11 else l24
+badpointer11:
+  fail NotAPointer
+l24:
+  %18 = load(%16)
+  %19 = getelt(%18, 1)
+  if %19 then l25 else badmethod2
+l25:
+  %tmp1 = call(%19, %16)
+  %20 = %this0 & 1
+  if %20 then badpointer12 else l26
+badpointer12:
+  fail NotAPointer
+l26:
+  %21 = %this0 + 8
+  %22 = load(%21)
+  %23 = getelt(%22, 3)
+  if %23 then l27 else badfield10
+l27:
+  %24 = %this0 & 1
+  if %24 then badpointer13 else l28
+badpointer13:
+  fail NotAPointer
+l28:
+  %25 = %this0 + 8
+  %26 = load(%25)
+  %27 = getelt(%26, 3)
+  if %27 then l29 else badfield11
+l29:
+  %28 = getelt(%this0, %27)
+  %29 = %28 & 1
+  if %29 then badpointer14 else l30
+badpointer14:
+  fail NotAPointer
+l30:
+  %30 = load(%28)
+  %31 = getelt(%30, 0)
+  if %31 then l31 else badmethod3
+l31:
+  %32 = call(%31, %28)
+  setelt(%this0, %23, %32)
+  ret %tmp1
+badmethod3:
+  fail NoSuchMethod
+badfield11:
+  fail NoSuchField
+badfield10:
+  fail NoSuchField
+badmethod2:
+  fail NoSuchMethod
+badfield9:
+  fail NoSuchField
+badnumber1:
+  fail NotANumber
+badmethod1:
+  fail NoSuchMethod
+badfield8:
+  fail NoSuchField
+
+doSTACKER(this0, stk0):
+  %x0 = 1
+  %v0 = 1
+  %x1 = 41
+  jump l33
+l33:
+  %x2 = phi(doSTACKER, %x1, l39, %x3)
+  %1 = %x2 & 1
+  if %1 then l34 else badnumber2
+l34:
+  %2 = %x2 / 2
+  if %2 then l35 else l36
+l35:
+  %3 = %stk0 & 1
+  if %3 then badpointer15 else l37
+badpointer15:
+  fail NotAPointer
+l37:
+  %4 = load(%stk0)
+  %5 = getelt(%4, 3)
+  if %5 then l38 else badmethod4
+l38:
+  %6 = call(%5, %stk0, %x2)
+  %7 = %x2 & 1
+  if %7 then l39 else badnumber3
+l39:
+  %8 = %x2 - 3
+  %x3 = %8 + 1
+  jump l33
+badnumber3:
+  fail NotANumber
+badmethod4:
+  fail NoSuchMethod
+l36:
+  %9 = %stk0 & 1
+  if %9 then badpointer16 else l40
+badpointer16:
+  fail NotAPointer
+l40:
+  %10 = load(%stk0)
+  %11 = getelt(%10, 4)
+  if %11 then l41 else badmethod5
+l41:
+  %v1 = call(%11, %stk0)
+  jump l42
+l42:
+  %v2 = phi(l41, %v1, l48, %v3)
+  %12 = %v2 & 1
+  if %12 then l43 else badnumber4
+l43:
+  %13 = %v2 / 2
+  if %13 then l44 else l45
+l44:
+  %14 = %v2 & 1
+  if %14 then l46 else badnumber5
+l46:
+  %15 = %v2 / 2
+  print(%15)
+  %16 = %stk0 & 1
+  if %16 then badpointer17 else l47
+badpointer17:
+  fail NotAPointer
+l47:
+  %17 = load(%stk0)
+  %18 = getelt(%17, 4)
+  if %18 then l48 else badmethod6
+l48:
+  %v3 = call(%18, %stk0)
+  jump l42
+badmethod6:
+  fail NoSuchMethod
+badnumber5:
+  fail NotANumber
+l45:
+  ret 0
+badnumber4:
+  fail NotANumber
+badmethod5:
+  fail NoSuchMethod
+badnumber2:
+  fail NotANumber
+
+main:
+  %node0 = 1
+  %stk0 = 1
+  %stkr0 = 1
+  %stk1 = alloc(3)
+  store(%stk1, @vtblSTACK)
+  %1 = %stk1 + 8
+  store(%1, @fieldsSTACK)
+  setelt(%stk1, 2, 1)
+  %node1 = alloc(5)
+  store(%node1, @vtblLISTNODE)
+  %2 = %node1 + 8
+  store(%2, @fieldsLISTNODE)
+  setelt(%node1, 2, 1)
+  setelt(%node1, 3, 1)
+  setelt(%node1, 4, 1)
+  %3 = %node1 & 1
+  if %3 then badpointer18 else l49
+badpointer18:
+  fail NotAPointer
+l49:
+  %4 = %node1 + 8
+  %5 = load(%4)
+  %6 = getelt(%5, 2)
+  if %6 then l50 else badfield12
+l50:
+  setelt(%node1, %6, 3)
+  %7 = %stk1 & 1
+  if %7 then badpointer19 else l51
+badpointer19:
+  fail NotAPointer
+l51:
+  %8 = %stk1 + 8
+  %9 = load(%8)
+  %10 = getelt(%9, 3)
+  if %10 then l52 else badfield13
+l52:
+  setelt(%stk1, %10, %node1)
+  %stkr1 = alloc(2)
+  store(%stkr1, @vtblSTACKER)
+  %11 = %stkr1 + 8
+  store(%11, @fieldsSTACKER)
+  %12 = %stkr1 & 1
+  if %12 then badpointer20 else l53
+badpointer20:
+  fail NotAPointer
+l53:
+  %13 = load(%stkr1)
+  %14 = getelt(%13, 5)
+  if %14 then l54 else badmethod7
+l54:
+  %15 = call(%14, %stkr1, %stk1)
+  ret 0
+badmethod7:
+  fail NoSuchMethod
+badfield13:
+  fail NoSuchField
+badfield12:
+  fail NoSuchField
+
