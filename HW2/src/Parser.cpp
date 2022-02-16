@@ -393,33 +393,35 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
    advanceAndExpectChar(input, ' ', "Missing space after method params list");
    skipWhitespace(input);
    advanceAndExpectWord(input, "with", "Missing with after method signature");
-   advanceAndExpectChar(input, ' ', "Missing space after with in method signature");
-   skipWhitespace(input);
-   advanceAndExpectWord(input, "locals", "Missing locals after method signature");
    std::vector<std::string> locals;
-   numArgs = 0;
-   while (true) {
+   if (input.peek() != ':') {
+      advanceAndExpectChar(input, ' ', "Missing space after with in method signature");
       skipWhitespace(input);
-      char nextChar = input.peek();
-      if (nextChar == ':') {
-         // Done parsing locals
-         break;
-      }
-      if (numArgs > 0) {
-         if (nextChar == ',') {
-            // Skip ','
-            input.ignore();
-            skipWhitespace(input);
-         } else {
-            throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: Method locals");
+      advanceAndExpectWord(input, "locals", "Missing locals after method signature");
+      numArgs = 0;
+      while (true) {
+         skipWhitespace(input);
+         char nextChar = input.peek();
+         if (nextChar == ':') {
+            // Done parsing locals
+            break;
          }
+         if (numArgs > 0) {
+            if (nextChar == ',') {
+               // Skip ','
+               input.ignore();
+               skipWhitespace(input);
+            } else {
+               throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: Method locals");
+            }
+         }
+         std::stringstream buf2;
+         // Parse local name
+         for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+         std::string local = buf2.str();
+         locals.push_back(local);
+         numArgs++;
       }
-      std::stringstream buf2;
-      // Parse local name
-      for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
-      std::string local = buf2.str();
-      locals.push_back(local);
-      numArgs++;
    }
    skipWhitespace(input);
    advanceAndExpectChar(input, ':', "Missing closing colon for method");
@@ -502,31 +504,33 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
    if (input.peek() == 'f') {
       // Parse fields
       advanceAndExpectWord(input, "fields", "Class expected \"fields\" but got something else");
-      advanceAndExpectChar(input, ' ', "Class missing space after \"fields\"");
-      int numArgs = 0;
-      while (true) {
-         skipWhitespace(input);
-         char nextChar = input.peek();
-         if (nextChar == ';' || nextChar == '\n') {
-            input.ignore();
-            // Done parsing locals
-            break;
-         }
-         if (numArgs > 0) {
-            if (nextChar == ',') {
-               // Skip ','
+      if (input.peek() != '\n') {
+         advanceAndExpectChar(input, ' ', "Class missing space after \"fields\"");
+         int numArgs = 0;
+         while (true) {
+            skipWhitespace(input);
+            char nextChar = input.peek();
+            if (nextChar == ';' || nextChar == '\n') {
                input.ignore();
-               skipWhitespace(input);
-            } else {
-               throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: class fields");
+               // Done parsing locals
+               break;
             }
+            if (numArgs > 0) {
+               if (nextChar == ',') {
+                  // Skip ','
+                  input.ignore();
+                  skipWhitespace(input);
+               } else {
+                  throw ParserException(std::string("Expected \',\', instead got \'") + nextChar + "\'. Context: class fields");
+               }
+            }
+            std::stringstream buf2;
+            // Parse field name
+            for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+            std::string field = buf2.str();
+            fields.push_back(field);
+            numArgs++;
          }
-         std::stringstream buf2;
-         // Parse field name
-         for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
-         std::string field = buf2.str();
-         fields.push_back(field);
-         numArgs++;
       }
    }
    std::vector<std::shared_ptr<MethodDeclaration>> methods;
@@ -568,29 +572,31 @@ std::shared_ptr<ProgramDeclaration> ProgramParser::parse(std::istream & input) {
    advanceAndExpectChar(input, ' ', "Program missing space after main");
    skipWhitespace(input);
    advanceAndExpectWord(input, "with", "Missing with after main");
-   advanceAndExpectChar(input, ' ', "Program missing space after with");
    std::vector<std::string> main_locals;
-   while (true) {
-      skipWhitespace(input);
-      std::stringstream buf;
-      if (input.peek() == ':') {
-         // Break early, no locals
-         break;
+   if (input.peek() != ':') {
+      advanceAndExpectChar(input, ' ', "Program missing space after with");
+      while (true) {
+         skipWhitespace(input);
+         std::stringstream buf;
+         if (input.peek() == ':') {
+            // Break early, no locals
+            break;
+         }
+         for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
+         if (buf.str().length() == 0) {
+            throw ParserException("main has invalid named local");
+         }
+         main_locals.push_back(buf.str());
+         skipWhitespace(input);
+         if (input.peek() != ',') {
+            break;
+         }
+         // Skip ','
+         input.ignore();
       }
-      for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
-      if (buf.str().length() == 0) {
-         throw ParserException("main has invalid named local");
+      if (main_locals.size() == 0) {
+         throw ParserException("Cannot have a program with zero local variables");
       }
-      main_locals.push_back(buf.str());
-      skipWhitespace(input);
-      if (input.peek() != ',') {
-         break;
-      }
-      // Skip ','
-      input.ignore();
-   }
-   if (main_locals.size() == 0) {
-      throw ParserException("Cannot have a program with zero local variables");
    }
    advanceAndExpectChar(input, ':', "Missing colon at end of main declaration");
    skipWhitespace(input);

@@ -339,8 +339,12 @@ class ValueNumberOptimizer : public IdentityOptimizer
          if (!_label_to_block.count(child_label)) {
             _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, c->params());
          }
-         _ownedlabels.insert(child_label);
-         addNewChild(_label_to_block[label], _label_to_block[child_label]);
+         if (_ownedlabels.find(child_label) == _ownedlabels.end()) {
+            addNewChild(_label_to_block[label], _label_to_block[child_label]);
+            _ownedlabels.insert(child_label);
+         } else {
+            addExistingChild(_label_to_block[label], _label_to_block[child_label]);
+         }
          adjustChildPhi(c);
       }
       void buildWeakChildConns(BasicBlock& node) {

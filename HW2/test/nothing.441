@@ -1,11 +1,6 @@
-# This code is a kind of *negative* test: value number should not do *anything* with the code for these methods!
-# In general, they have code which could be recognized and optimized in some way (e.g., via code motion), but 
-# will not be be handled by global value numbering, because the definitions do not dominate the uses.
-
-class Foo [
-    fields
+class FOO [
     method doStuff(x,y,z) with locals r:
-        if (x < y) {
+        if (x - y): {
             r = ((x + y) + z)
         } else {
             r = ((x + y) + z)

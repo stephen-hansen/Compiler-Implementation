@@ -1,0 +1,77 @@
+data:
+global array vtblFOO: { doStuffFOO }
+global array fieldsFOO: {  }
+code:
+
+doStuffFOO(this0, x0, y0, z0):
+  %1 = %x0 & 1
+  if %1 then l1 else badnumber1
+l1:
+  %2 = %y0 & 1
+  if %2 then l2 else badnumber2
+l2:
+  %3 = %x0 - %y0
+  %4 = %3 + 1
+  %5 = %4 / 2
+  if %5 then l3 else l4
+l3:
+  jump l5
+l5:
+  jump l6
+l6:
+  %8 = %y0 & 18446744073709551614
+  %9 = %8 + %x0
+  %10 = %z0 & 1
+  if %10 then l7 else badnumber5
+l7:
+  %11 = %z0 & 18446744073709551614
+  %r1 = %11 + %9
+  jump l11
+l11:
+  %r3 = phi(l7, %r1, l10, %r2)
+  %18 = %r3 & 1
+  if %18 then l12 else badnumber9
+l12:
+  %19 = %r3 / 2
+  print(%19)
+  jump l13
+l13:
+  jump l14
+l14:
+  %22 = %y0 & 18446744073709551614
+  %23 = %22 + %x0
+  %24 = %z0 & 1
+  if %24 then l15 else badnumber12
+l15:
+  %25 = %z0 & 18446744073709551614
+  %26 = %23 + %25
+  ret %26
+badnumber12:
+  fail NotANumber
+badnumber9:
+  fail NotANumber
+badnumber5:
+  fail NotANumber
+l4:
+  jump l8
+l8:
+  jump l9
+l9:
+  %14 = %y0 & 18446744073709551614
+  %15 = %14 + %x0
+  %16 = %z0 & 1
+  if %16 then l10 else badnumber8
+l10:
+  %17 = %z0 & 18446744073709551614
+  %r2 = %15 + %17
+  jump l11
+badnumber8:
+  fail NotANumber
+badnumber2:
+  fail NotANumber
+badnumber1:
+  fail NotANumber
+
+main:
+  ret 0
+
