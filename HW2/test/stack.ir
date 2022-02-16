@@ -1,0 +1,358 @@
+data:
+global array vtblLISTNODE: { getNextLISTNODE, getValLISTNODE, isNullLISTNODE, 0, 0 }
+global array fieldsLISTNODE: { 2, 3, 4, 0 }
+global array vtblSTACK: { 0, 0, 0, pushSTACK, popSTACK }
+global array fieldsSTACK: { 0, 0, 0, 2 }
+code:
+
+getNextLISTNODE(this0):
+  %1 = %this0 & 1
+  if %1 then badpointer1 else l1
+badpointer1:
+  fail NotAPointer
+l1:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 1)
+  if %4 then l2 else badfield1
+l2:
+  %5 = getelt(%this0, %4)
+  ret %5
+badfield1:
+  fail NoSuchField
+getValLISTNODE(this0):
+  %1 = %this0 & 1
+  if %1 then badpointer2 else l3
+badpointer2:
+  fail NotAPointer
+l3:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 0)
+  if %4 then l4 else badfield2
+l4:
+  %5 = getelt(%this0, %4)
+  ret %5
+badfield2:
+  fail NoSuchField
+isNullLISTNODE(this0):
+  %1 = %this0 & 1
+  if %1 then badpointer3 else l5
+badpointer3:
+  fail NotAPointer
+l5:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 2)
+  if %4 then l6 else badfield3
+l6:
+  %5 = getelt(%this0, %4)
+  ret %5
+badfield3:
+  fail NoSuchField
+
+pushSTACK(this0, v0):
+  %tmp1 = alloc(5)
+  store(%tmp1, @vtblLISTNODE)
+  %1 = %tmp1 + 8
+  store(%1, @fieldsLISTNODE)
+  setelt(%tmp1, 2, 1)
+  setelt(%tmp1, 3, 1)
+  setelt(%tmp1, 4, 1)
+  %2 = %tmp1 & 1
+  if %2 then badpointer4 else l7
+badpointer4:
+  fail NotAPointer
+l7:
+  %4 = load(%1)
+  %5 = getelt(%4, 2)
+  if %5 then l8 else badfield4
+l8:
+  setelt(%tmp1, %5, 1)
+  jump l9
+l9:
+  %8 = load(%1)
+  %9 = getelt(%8, 0)
+  if %9 then l10 else badfield5
+l10:
+  setelt(%tmp1, %9, %v0)
+  jump l11
+l11:
+  %12 = load(%1)
+  %13 = getelt(%12, 1)
+  if %13 then l12 else badfield6
+l12:
+  %14 = %this0 & 1
+  if %14 then badpointer7 else l13
+badpointer7:
+  fail NotAPointer
+l13:
+  %15 = %this0 + 8
+  %16 = load(%15)
+  %17 = getelt(%16, 3)
+  if %17 then l14 else badfield7
+l14:
+  %18 = getelt(%this0, %17)
+  setelt(%tmp1, %13, %18)
+  jump l15
+l15:
+  %21 = load(%15)
+  %22 = getelt(%21, 3)
+  if %22 then l16 else badfield8
+l16:
+  setelt(%this0, %22, %tmp1)
+  ret 1
+badfield8:
+  fail NoSuchField
+badfield7:
+  fail NoSuchField
+badfield6:
+  fail NoSuchField
+badfield5:
+  fail NoSuchField
+badfield4:
+  fail NoSuchField
+popSTACK(this0):
+  %1 = %this0 & 1
+  if %1 then badpointer9 else l17
+badpointer9:
+  fail NotAPointer
+l17:
+  %2 = %this0 + 8
+  %3 = load(%2)
+  %4 = getelt(%3, 3)
+  if %4 then l18 else badfield9
+l18:
+  %5 = getelt(%this0, %4)
+  %6 = %5 & 1
+  if %6 then badpointer10 else l19
+badpointer10:
+  fail NotAPointer
+l19:
+  %7 = load(%5)
+  %8 = getelt(%7, 2)
+  if %8 then l20 else badmethod1
+l20:
+  %9 = call(%8, %5)
+  %10 = %9 & 1
+  if %10 then l21 else badnumber1
+l21:
+  %11 = %9 / 2
+  if %11 then l22 else l23
+l22:
+  ret 1
+l23:
+  jump l24
+l24:
+  %14 = load(%2)
+  %15 = getelt(%14, 3)
+  if %15 then l25 else badfield10
+l25:
+  %16 = getelt(%this0, %15)
+  %17 = %16 & 1
+  if %17 then badpointer12 else l26
+badpointer12:
+  fail NotAPointer
+l26:
+  %18 = load(%16)
+  %19 = getelt(%18, 1)
+  if %19 then l27 else badmethod2
+l27:
+  %tmp1 = call(%19, %16)
+  jump l28
+l28:
+  %22 = load(%2)
+  %23 = getelt(%22, 3)
+  if %23 then l29 else badfield11
+l29:
+  jump l30
+l30:
+  %26 = load(%2)
+  %27 = getelt(%26, 3)
+  if %27 then l31 else badfield12
+l31:
+  %28 = getelt(%this0, %27)
+  %29 = %28 & 1
+  if %29 then badpointer15 else l32
+badpointer15:
+  fail NotAPointer
+l32:
+  %30 = load(%28)
+  %31 = getelt(%30, 0)
+  if %31 then l33 else badmethod3
+l33:
+  %32 = call(%31, %28)
+  setelt(%this0, %23, %32)
+  ret %tmp1
+badmethod3:
+  fail NoSuchMethod
+badfield12:
+  fail NoSuchField
+badfield11:
+  fail NoSuchField
+badmethod2:
+  fail NoSuchMethod
+badfield10:
+  fail NoSuchField
+badnumber1:
+  fail NotANumber
+badmethod1:
+  fail NoSuchMethod
+badfield9:
+  fail NoSuchField
+
+main:
+  %stk1 = alloc(3)
+  store(%stk1, @vtblSTACK)
+  %1 = %stk1 + 8
+  store(%1, @fieldsSTACK)
+  setelt(%stk1, 2, 1)
+  %node1 = alloc(5)
+  store(%node1, @vtblLISTNODE)
+  %2 = %node1 + 8
+  store(%2, @fieldsLISTNODE)
+  setelt(%node1, 2, 1)
+  setelt(%node1, 3, 1)
+  setelt(%node1, 4, 1)
+  %3 = %node1 & 1
+  if %3 then badpointer16 else l35
+badpointer16:
+  fail NotAPointer
+l35:
+  %5 = load(%2)
+  %6 = getelt(%5, 2)
+  if %6 then l36 else badfield13
+l36:
+  setelt(%node1, %6, 3)
+  %7 = %stk1 & 1
+  if %7 then badpointer17 else l37
+badpointer17:
+  fail NotAPointer
+l37:
+  %9 = load(%1)
+  %10 = getelt(%9, 3)
+  if %10 then l38 else badfield14
+l38:
+  setelt(%stk1, %10, %node1)
+  jump l39
+l39:
+  %12 = load(%stk1)
+  %13 = getelt(%12, 3)
+  if %13 then l40 else badmethod4
+l40:
+  %14 = call(%13, %stk1, 3)
+  jump l41
+l41:
+  %16 = load(%stk1)
+  %17 = getelt(%16, 3)
+  if %17 then l42 else badmethod5
+l42:
+  %18 = call(%17, %stk1, 7)
+  jump l43
+l43:
+  %20 = load(%stk1)
+  %21 = getelt(%20, 3)
+  if %21 then l44 else badmethod6
+l44:
+  %22 = call(%21, %stk1, 11)
+  jump l45
+l45:
+  %24 = load(%stk1)
+  %25 = getelt(%24, 3)
+  if %25 then l46 else badmethod7
+l46:
+  %26 = call(%25, %stk1, 19)
+  jump l47
+l47:
+  %28 = load(%stk1)
+  %29 = getelt(%28, 4)
+  if %29 then l48 else badmethod8
+l48:
+  %30 = call(%29, %stk1)
+  %31 = %30 & 1
+  if %31 then l49 else badnumber2
+l49:
+  %32 = %30 / 2
+  print(%32)
+  jump l50
+l50:
+  %34 = load(%stk1)
+  %35 = getelt(%34, 4)
+  if %35 then l51 else badmethod9
+l51:
+  %36 = call(%35, %stk1)
+  %37 = %36 & 1
+  if %37 then l52 else badnumber3
+l52:
+  %38 = %36 / 2
+  print(%38)
+  jump l53
+l53:
+  %40 = load(%stk1)
+  %41 = getelt(%40, 4)
+  if %41 then l54 else badmethod10
+l54:
+  %42 = call(%41, %stk1)
+  %43 = %42 & 1
+  if %43 then l55 else badnumber4
+l55:
+  %44 = %42 / 2
+  print(%44)
+  jump l56
+l56:
+  %46 = load(%stk1)
+  %47 = getelt(%46, 4)
+  if %47 then l57 else badmethod11
+l57:
+  %48 = call(%47, %stk1)
+  %49 = %48 & 1
+  if %49 then l58 else badnumber5
+l58:
+  %50 = %48 / 2
+  print(%50)
+  jump l59
+l59:
+  %52 = load(%stk1)
+  %53 = getelt(%52, 4)
+  if %53 then l60 else badmethod12
+l60:
+  %54 = call(%53, %stk1)
+  %55 = %54 & 1
+  if %55 then l61 else badnumber6
+l61:
+  %56 = %54 / 2
+  print(%56)
+  ret 0
+badnumber6:
+  fail NotANumber
+badmethod12:
+  fail NoSuchMethod
+badnumber5:
+  fail NotANumber
+badmethod11:
+  fail NoSuchMethod
+badnumber4:
+  fail NotANumber
+badmethod10:
+  fail NoSuchMethod
+badnumber3:
+  fail NotANumber
+badmethod9:
+  fail NoSuchMethod
+badnumber2:
+  fail NotANumber
+badmethod8:
+  fail NoSuchMethod
+badmethod7:
+  fail NoSuchMethod
+badmethod6:
+  fail NoSuchMethod
+badmethod5:
+  fail NoSuchMethod
+badmethod4:
+  fail NoSuchMethod
+badfield14:
+  fail NoSuchField
+badfield13:
+  fail NoSuchField
+

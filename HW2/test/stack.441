@@ -1,0 +1,42 @@
+class LISTNODE [
+   fields val, next, isnull
+   method getNext() with locals:
+      return &this.next
+   method getVal() with locals:
+      return &this.val
+   method isNull() with locals:
+      return &this.isnull
+]
+class STACK [
+   fields list
+   method push(v) with locals tmp:
+      tmp = @LISTNODE
+      !tmp.isnull = 0
+      !tmp.val = v
+      !tmp.next = &this.list
+      !this.list = tmp
+      return 0
+   method pop() with locals tmp:
+      if ^&this.list.isNull(): {
+         return 0 
+      } else {
+         tmp = ^&this.list.getVal()
+         !this.list = ^&this.list.getNext()
+         return tmp
+      }
+]
+
+main with stk, node:
+   stk = @STACK
+   node = @LISTNODE
+   !node.isnull = 1
+   !stk.list = node
+   _ = ^stk.push(1)
+   _ = ^stk.push(3)
+   _ = ^stk.push(5)
+   _ = ^stk.push(9)
+   print(^stk.pop())
+   print(^stk.pop())
+   print(^stk.pop())
+   print(^stk.pop())
+   print(^stk.pop())

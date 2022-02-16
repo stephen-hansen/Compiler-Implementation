@@ -1,0 +1,208 @@
+data:
+global array vtblFOO: { m1FOO }
+global array fieldsFOO: { 2, 3, 4, 5 }
+code:
+
+m1FOO(this0, x0, y0, z0):
+  if 1 then l1 else l2
+l1:
+  print(1)
+  jump l3
+l2:
+  print(2)
+  jump l3
+l3:
+  %4 = %this0 & 1
+  if %4 then badpointer1 else l4
+badpointer1:
+  fail NotAPointer
+l4:
+  %5 = %this0 + 8
+  %6 = load(%5)
+  %7 = getelt(%6, 0)
+  if %7 then l5 else badfield1
+l5:
+  setelt(%this0, %7, %x0)
+  ret 11
+badfield1:
+  fail NoSuchField
+
+main:
+  %a1 = alloc(6)
+  store(%a1, @vtblFOO)
+  %1 = %a1 + 8
+  store(%1, @fieldsFOO)
+  setelt(%a1, 2, 1)
+  setelt(%a1, 3, 1)
+  setelt(%a1, 4, 1)
+  setelt(%a1, 5, 1)
+  %2 = %a1 & 1
+  if %2 then badpointer2 else l6
+badpointer2:
+  fail NotAPointer
+l6:
+  %4 = load(%1)
+  %5 = getelt(%4, 1)
+  if %5 then l7 else badfield2
+l7:
+  setelt(%a1, %5, %a1)
+  if 1 then l8 else badnumber1
+l8:
+  if %2 then badpointer3 else l9
+badpointer3:
+  fail NotAPointer
+l9:
+  %14 = load(%1)
+  %15 = getelt(%14, 1)
+  if %15 then l10 else badfield3
+l10:
+  %16 = getelt(%a1, %15)
+  %17 = %16 & 1
+  if %17 then badpointer4 else l11
+badpointer4:
+  fail NotAPointer
+l11:
+  %18 = load(%16)
+  %19 = getelt(%18, 0)
+  if %19 then l12 else badmethod1
+l12:
+  %20 = call(%19, %16, 5, 101, 61)
+  %21 = %20 & 1
+  if %21 then l13 else badnumber2
+l13:
+  %22 = %20 / 2
+  %24 = %22 / 4
+  %25 = %24 * 2
+  %26 = %25 + 1
+  if 1 then l14 else badnumber3
+l14:
+  %28 = 201 - %26
+  %29 = %28 + 1
+  %31 = %29 / 2
+  %33 = %31 * 2
+  %z2 = %33 + 1
+  %34 = %z2 & 1
+  if %34 then l15 else badnumber4
+l15:
+  %35 = %z2 - 199
+  %36 = %35 + 1
+  %37 = %36 / 2
+  if %37 then l16 else l17
+l16:
+  if 1 then l18 else badnumber5
+l18:
+  if 50 then l19 else l20
+l19:
+  if %34 then l21 else badnumber6
+l21:
+  %41 = %z2 / 2
+  print(%41)
+  jump l20
+badnumber6:
+  fail NotANumber
+l20:
+  jump l28
+badnumber5:
+  fail NotANumber
+l17:
+  jump l22
+l22:
+  %z4 = phi(l17, %z2, l27, %z4)
+  %y3 = phi(l17, 101, l27, %y3)
+  %x3 = phi(l17, 201, l27, %x4)
+  %a3 = phi(l17, %a1, l27, %a3)
+  %42 = %x3 & 1
+  if %42 then l23 else badnumber7
+l23:
+  %43 = %x3 / 2
+  if %43 then l24 else l25
+l24:
+  if %42 then l26 else badnumber8
+l26:
+  print(%43)
+  if %42 then l27 else badnumber9
+l27:
+  %49 = %43 / 2
+  %50 = %49 * 2
+  %x4 = %50 + 1
+  jump l22
+badnumber9:
+  fail NotANumber
+badnumber8:
+  fail NotANumber
+l25:
+  jump l28
+l28:
+  %z5 = phi(l20, %z2, l25, %z4)
+  %y4 = phi(l20, 101, l25, %y3)
+  %x5 = phi(l20, 201, l25, %x3)
+  %a4 = phi(l20, %a1, l25, %a3)
+  if 0 then l29 else l30
+l29:
+  ret 7
+l30:
+  %52 = %y4 & 1
+  if %52 then l31 else badnumber10
+l31:
+  %y5 = %y4 + 2
+  %54 = %y5 & 1
+  if %54 then l32 else badnumber11
+l32:
+  %55 = %y5 / 2
+  print(%55)
+  jump l33
+l33:
+  if 1 then l34 else l35
+l34:
+  %57 = %z5 & 1
+  if %57 then l36 else badnumber12
+l36:
+  %58 = %z5 - 3
+  %z6 = %58 + 1
+  %59 = %z6 & 1
+  if %59 then l37 else badnumber13
+l37:
+  %60 = %z6 / 2
+  print(%60)
+  jump l38
+l38:
+  %61 = %x5 & 1
+  if %61 then l39 else badnumber14
+l39:
+  %62 = %x5 / 2
+  if %62 then l40 else l41
+l40:
+  print(1234)
+  ret %x5
+l41:
+  print(5678)
+  ret %y5
+badnumber14:
+  fail NotANumber
+badnumber13:
+  fail NotANumber
+badnumber12:
+  fail NotANumber
+l35:
+  ret 5
+badnumber11:
+  fail NotANumber
+badnumber10:
+  fail NotANumber
+badnumber7:
+  fail NotANumber
+badnumber4:
+  fail NotANumber
+badnumber3:
+  fail NotANumber
+badnumber2:
+  fail NotANumber
+badmethod1:
+  fail NoSuchMethod
+badfield3:
+  fail NoSuchField
+badnumber1:
+  fail NotANumber
+badfield2:
+  fail NoSuchField
+

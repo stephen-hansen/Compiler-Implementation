@@ -1,6 +1,7 @@
 #ifndef _CS_441_VALUE_NUMBER_OPTIMIZER_H
 #define _CS_441_VALUE_NUMBER_OPTIMIZER_H
 #include <map>
+#include <set>
 #include <stack>
 #include <vector>
 #include "CFG.h"
@@ -16,6 +17,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
       std::stack<std::map<std::pair<char, std::vector<std::string>>, std::string>> _htstack;
       std::map<std::string, std::string> _vn;
       std::map<std::string, std::shared_ptr<DomTreeNode>> _domtree;
+      std::set<std::string> _prunelabels;
       std::string getVN(std::string rhs) {
          if (_vn.find(rhs) == _vn.end()) {
             _vn[rhs] = rhs;
@@ -229,7 +231,60 @@ class ValueNumberOptimizer : public IdentityOptimizer
          _new_block->setControl(std::make_shared<JumpControl>(node.branch()));
       }
       void visit(IfElseControl& node) {
-         _new_block->setControl(std::make_shared<IfElseControl>(getVN(node.cond()), node.if_branch(), node.else_branch()));
+         std::string cond = getVN(node.cond());
+         if (cond == "1") {
+            // Go to if branch
+            _new_block->setControl(std::make_shared<JumpControl>(node.if_branch()));
+            // Prune else
+            _prunelabels.insert(node.else_branch());
+         } else if (cond == "0") {
+            // Go to else branch
+            _new_block->setControl(std::make_shared<JumpControl>(node.else_branch()));
+            // Prune if
+            _prunelabels.insert(node.if_branch());
+         } else {
+            // Check if it is a tag check
+            bool is_tagcheck = false;
+            bool use_else = false;
+            std::pair<char, std::vector<std::string>> hash;
+            std::vector<std::string> args;
+            std::string if_label = node.if_branch();
+            std::string else_label = node.else_branch();
+            // badpointer, badmethod, badfield, badnumber
+            if (if_label.find("badpointer") != std::string::npos) {
+               is_tagcheck = true;
+               args = std::vector<std::string>({ cond, "badpointer" });
+               use_else = true;
+            } else if (else_label.find("badmethod") != std::string::npos) {
+               is_tagcheck = true;
+               args = std::vector<std::string>({ cond, "badmethod" });
+            } else if (else_label.find("badfield") != std::string::npos) {
+               is_tagcheck = true;
+               args = std::vector<std::string>({ cond, "badfield" });
+            } else if (else_label.find("badnumber") != std::string::npos) {
+               is_tagcheck = true;
+               args = std::vector<std::string>({ cond, "badnumber" });
+            }
+            if (is_tagcheck) {
+               hash = std::make_pair('#', args);
+               // Have we seen this tag check before
+               if (_hashtable.find(hash) != _hashtable.end()) {
+                  // Replace with jump
+                  if (use_else) {
+                     _new_block->setControl(std::make_shared<JumpControl>(else_label));
+                     _prunelabels.insert(if_label);
+                  } else {
+                     _new_block->setControl(std::make_shared<JumpControl>(if_label));
+                     _prunelabels.insert(else_label);
+                  }
+                  return; 
+               } else {
+                  // Just put in hash table with dummy value
+                  _hashtable[hash] = cond;
+               }
+            }
+            _new_block->setControl(std::make_shared<IfElseControl>(cond, node.if_branch(), node.else_branch()));
+         }
       }
       void visit(RetControl& node) {
          _new_block->setControl(std::make_shared<RetControl>(getVN(node.val())));
@@ -250,9 +305,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
                }
                if (new_args != args) {
                   _modified = true;
-                  std::cerr << "Pre-Optimized: " << p->toString() << std::endl;
                   p->setArgs(new_args);
-                  std::cerr << "Optimized: " << p->toString() << std::endl;
                }
             }
          }
@@ -268,9 +321,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
                }
                if (new_args != args) {
                   _modified = true;
-                  std::cerr << "Pre-Optimized: " << p->toString() << std::endl;
                   p->setArgs(new_args);
-                  std::cerr << "Optimized: " << p->toString() << std::endl;
                }
             }
          }
@@ -278,6 +329,10 @@ class ValueNumberOptimizer : public IdentityOptimizer
       void optimizeChild(BasicBlock& node, std::shared_ptr<BasicBlock>& c) {
          std::string label = node.label();
          std::string child_label = c->label();
+         if (_prunelabels.find(child_label) != _prunelabels.end()) {
+            // Dead-code, prune
+            return;
+         }
          if (!_label_to_block.count(child_label)) {
             _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, c->params());
          }
@@ -290,6 +345,10 @@ class ValueNumberOptimizer : public IdentityOptimizer
          std::vector<std::weak_ptr<BasicBlock>> weak_children = node.weak_children();
          for (auto & wc : weak_children) {
             std::string child_label = wc.lock()->label();
+            if (_prunelabels.find(child_label) != _prunelabels.end()) {
+               // Dead-code, prune
+               continue;
+            }
             if (!_label_to_block.count(child_label)) {
                _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, wc.lock()->params());
             }
@@ -337,6 +396,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
             _domtree = ds.solveTree(std::make_shared<MethodCFG>(node));
             _modified = false;
             // Clear VN, hash table
+            _prunelabels.clear();
             _vn.clear();
             _hashtable.clear();
             _htstack.push(_hashtable);
