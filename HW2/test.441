@@ -1,28 +1,31 @@
-main with x, y, z:
-x = 0
-print x
-while x: {
-   y = (x + 1)
-   print x
-   if x: {
-      z = (x + 1)
-      print x
-   } else {
-      z = (x + 1)
-      print x
-      if y: {
-         y = (x + 1)
-         print x
-      } else {
-         z = (x + 1)
-         print x
-      }
-      y = (x + 1)
-      print x
-   }
-   z = (x + 1)
-   print x
+class FOO [
+   method m(x) with locals:
+      return x
+]
+
+main with a, b, c, d, e, f, u, v, w, x, y:
+a = 1
+b = 2
+c = 3
+d = 4
+e = 5
+f = 6
+u = (a + b)
+v = (c + d)
+w = (e + f)
+if ^@FOO.m(u): {
+   x = (c + d)
+   y = (c + d)
+} else {
+   u = (a + b)
+   x = (e + f)
+   y = (e + f)
 }
-x = (x + 4)
+z = (u + y)
+u = (a + b)
 print x
+print y
+print u
+print v
+print w
 

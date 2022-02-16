@@ -1,56 +1,146 @@
 data:
+global array vtblFOO: { mFOO }
+global array fieldsFOO: {  }
 code:
 
+mFOO(this0, x0):
+  ret %x0
+
 main:
-  %x0 = 1
-  %x1 = 1
-  print(0)
-  jump l1
+  if 1 then l1 else badnumber1
 l1:
-  %x2 = phi(main, %x1, l12, %x4)
-  %2 = %x2 & 1
-  if %2 then l2 else badnumber1
+  if 1 then l2 else badnumber2
 l2:
-  %3 = %x2 / 2
-  if %3 then l3 else l4
+  if 1 then l3 else badnumber3
 l3:
-  print(1)
-  %5 = %x2 & 1
-  if %5 then l5 else badnumber2
+  if 1 then l4 else badnumber4
+l4:
+  if 1 then l5 else badnumber5
 l5:
-  %6 = %x2 / 2
-  if %6 then l6 else l7
+  if 1 then l6 else badnumber6
 l6:
-  print(2)
-  jump l12
+  %10 = alloc(2)
+  store(%10, @vtblFOO)
+  %11 = %10 + 8
+  store(%11, @fieldsFOO)
+  %12 = load(%10)
+  %13 = getelt(%12, 0)
+  if %13 then l7 else badmethod1
 l7:
-  print(5)
-  %9 = %x2 & 1
-  if %9 then l8 else badnumber3
+  %14 = call(%13, %10, 7)
+  %15 = %14 & 1
+  if %15 then l8 else badnumber7
 l8:
-  %10 = %x2 / 2
-  if %10 then l9 else l10
+  %16 = %14 / 2
+  if %16 then l9 else l10
 l9:
-  print(6)
-  jump l11
-l10:
-  print(8)
-  jump l11
+  if 1 then l11 else badnumber8
 l11:
-  %x3 = phi(l9, %x2, l10, %x2)
-  print(7)
-  jump l12
+  if 1 then l12 else badnumber9
 l12:
-  %x4 = phi(l6, %x2, l11, %x3)
+  if 1 then l13 else badnumber10
+l13:
+  if 1 then l14 else badnumber11
+l14:
+  jump l21
+badnumber11:
+  fail NotANumber
+badnumber10:
+  fail NotANumber
+badnumber9:
+  fail NotANumber
+badnumber8:
+  fail NotANumber
+l10:
+  if 1 then l15 else badnumber12
+l15:
+  if 1 then l16 else badnumber13
+l16:
+  if 1 then l17 else badnumber14
+l17:
+  if 1 then l18 else badnumber15
+l18:
+  if 1 then l19 else badnumber16
+l19:
+  if 1 then l20 else badnumber17
+l20:
+  jump l21
+l21:
+  %32 = %u3 & 1
+  if %32 then l22 else badnumber18
+l22:
+  %33 = %y3 & 1
+  if %33 then l23 else badnumber19
+l23:
+  %34 = %y3 & 18446744073709551614
+  %z0 = %34 + %u3
+  if 1 then l24 else badnumber20
+l24:
+  if 1 then l25 else badnumber21
+l25:
+  %38 = %x3 & 1
+  if %38 then l26 else badnumber22
+l26:
+  %39 = %x3 / 2
+  print(%39)
+  if %33 then l27 else badnumber23
+l27:
+  %41 = %y3 / 2
+  print(%41)
+  if 1 then l28 else badnumber24
+l28:
   print(3)
-  jump l1
+  if 1 then l29 else badnumber25
+l29:
+  print(7)
+  if 1 then l30 else badnumber26
+l30:
+  print(11)
+  ret 0
+badnumber26:
+  fail NotANumber
+badnumber25:
+  fail NotANumber
+badnumber24:
+  fail NotANumber
+badnumber23:
+  fail NotANumber
+badnumber22:
+  fail NotANumber
+badnumber21:
+  fail NotANumber
+badnumber20:
+  fail NotANumber
+badnumber19:
+  fail NotANumber
+badnumber18:
+  fail NotANumber
+badnumber17:
+  fail NotANumber
+badnumber16:
+  fail NotANumber
+badnumber15:
+  fail NotANumber
+badnumber14:
+  fail NotANumber
+badnumber13:
+  fail NotANumber
+badnumber12:
+  fail NotANumber
+badnumber7:
+  fail NotANumber
+badmethod1:
+  fail NoSuchMethod
+badnumber6:
+  fail NotANumber
+badnumber5:
+  fail NotANumber
+badnumber4:
+  fail NotANumber
 badnumber3:
   fail NotANumber
 badnumber2:
   fail NotANumber
-l4:
-  print(4)
-  ret 0
 badnumber1:
   fail NotANumber
 
