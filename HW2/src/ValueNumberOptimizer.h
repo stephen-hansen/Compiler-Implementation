@@ -18,6 +18,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
       std::map<std::string, std::string> _vn;
       std::map<std::string, std::shared_ptr<DomTreeNode>> _domtree;
       std::set<std::string> _prunelabels;
+      std::set<std::string> _ownedlabels;
       std::string getVN(std::string rhs) {
          if (_vn.find(rhs) == _vn.end()) {
             _vn[rhs] = rhs;
@@ -232,16 +233,18 @@ class ValueNumberOptimizer : public IdentityOptimizer
       }
       void visit(IfElseControl& node) {
          std::string cond = getVN(node.cond());
-         if (cond == "1") {
-            // Go to if branch
-            _new_block->setControl(std::make_shared<JumpControl>(node.if_branch()));
-            // Prune else
-            _prunelabels.insert(node.else_branch());
-         } else if (cond == "0") {
-            // Go to else branch
-            _new_block->setControl(std::make_shared<JumpControl>(node.else_branch()));
-            // Prune if
-            _prunelabels.insert(node.if_branch());
+         if (isNumber(cond)) {
+            if (cond != "0") {
+               // Go to if branch
+               _new_block->setControl(std::make_shared<JumpControl>(node.if_branch()));
+               // Prune else
+               _prunelabels.insert(node.else_branch());
+            } else {
+               // Go to else branch
+               _new_block->setControl(std::make_shared<JumpControl>(node.else_branch()));
+               // Prune if
+               _prunelabels.insert(node.if_branch());
+            }
          } else {
             // Check if it is a tag check
             bool is_tagcheck = false;
@@ -336,6 +339,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
          if (!_label_to_block.count(child_label)) {
             _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, c->params());
          }
+         _ownedlabels.insert(child_label);
          addNewChild(_label_to_block[label], _label_to_block[child_label]);
          adjustChildPhi(c);
       }
@@ -352,7 +356,12 @@ class ValueNumberOptimizer : public IdentityOptimizer
             if (!_label_to_block.count(child_label)) {
                _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, wc.lock()->params());
             }
-            addExistingChild(_label_to_block[label], _label_to_block[child_label]);
+            if (_ownedlabels.find(child_label) == _ownedlabels.end()) {
+               addNewChild(_label_to_block[label], _label_to_block[child_label]);
+               _ownedlabels.insert(child_label);
+            } else {
+               addExistingChild(_label_to_block[label], _label_to_block[child_label]);
+            }
             std::shared_ptr<BasicBlock> child = wc.lock();
             adjustChildPhi(child);
             // No recursion
@@ -372,6 +381,8 @@ class ValueNumberOptimizer : public IdentityOptimizer
       void visit(BasicBlock& node) {
          // This will do a copy on assignment
          _hashtable = _htstack.top();
+         // No labels to prune (at the moment)
+         _prunelabels.clear();
          // Optimize with current table
          optimizeBlock(node);
          // This will fix phi funcs of successors
@@ -397,6 +408,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
             _modified = false;
             // Clear VN, hash table
             _prunelabels.clear();
+            _ownedlabels.clear();
             _vn.clear();
             _hashtable.clear();
             _htstack.push(_hashtable);
