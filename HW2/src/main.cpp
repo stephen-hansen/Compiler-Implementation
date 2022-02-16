@@ -14,6 +14,8 @@ int main(int argc, char ** argv) {
          printAST = true;
       } else if (arg == "-noSSA") {
          noSSA = true;
+         // VN needs SSA to work correctly
+         noVN = true;
       } else if (arg == "-noopt") {
          noopt = true;
       } else if (arg == "-simpleSSA") {
