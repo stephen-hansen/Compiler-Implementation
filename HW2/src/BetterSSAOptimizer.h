@@ -194,13 +194,6 @@ class BetterSSAOptimizer : public SSAOptimizer
          std::vector<std::string> variables = node.variables();
          // Call parent method to add in the versioning
          IdentityOptimizer::visit(node);
-      }
-      void visit(ProgramCFG& node) {
-         // Load in phi statement locations with helper
-         BetterSSAHelper helper;
-         _label_to_phi_variables = helper.get_phi_variables(node);
-         // Optimize program
-         IdentityOptimizer::visit(node);
          // Post-process phi statements
          for (auto & kv : _label_to_block) {
             std::string label = kv.first;
@@ -231,7 +224,13 @@ class BetterSSAOptimizer : public SSAOptimizer
             }
          }
       }
-
+      void visit(ProgramCFG& node) {
+         // Load in phi statement locations with helper
+         BetterSSAHelper helper;
+         _label_to_phi_variables = helper.get_phi_variables(node);
+         // Optimize program
+         IdentityOptimizer::visit(node);
+      }
 };
 
 #endif

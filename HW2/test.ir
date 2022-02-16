@@ -66,27 +66,25 @@ l19:
 l20:
   jump l21
 l21:
-  %32 = %u3 & 1
-  if %32 then l22 else badnumber18
+  %y3 = phi(l14, 15, l20, 23)
+  if 1 then l22 else badnumber18
 l22:
   %33 = %y3 & 1
   if %33 then l23 else badnumber19
 l23:
   %34 = %y3 & 18446744073709551614
-  %z0 = %34 + %u3
+  %z0 = %34 + 7
   if 1 then l24 else badnumber20
 l24:
   if 1 then l25 else badnumber21
 l25:
-  %38 = %x3 & 1
-  if %38 then l26 else badnumber22
+  if %33 then l26 else badnumber22
 l26:
-  %39 = %x3 / 2
+  %39 = %y3 / 2
   print(%39)
   if %33 then l27 else badnumber23
 l27:
-  %41 = %y3 / 2
-  print(%41)
+  print(%39)
   if 1 then l28 else badnumber24
 l28:
   print(3)
