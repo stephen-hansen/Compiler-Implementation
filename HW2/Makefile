@@ -1,5 +1,5 @@
 CC=g++
-STD=-std=c++17
+STD=-g -std=c++17
 
 .PHONY : clean
 

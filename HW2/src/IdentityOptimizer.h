@@ -75,7 +75,9 @@ class IdentityOptimizer : public CFGVisitor
       }
       void optimizeBlock(BasicBlock& node) {
          std::string label = node.label();
-         // Assume incoming node is already copied into _label_to_block
+         if (!_label_to_block.count(label)) {
+            _label_to_block[label] = std::make_shared<BasicBlock>(label, node.params());
+         }
          _new_block = _label_to_block[label];
          // Optimize each primitive
          std::vector<std::shared_ptr<PrimitiveStatement>> primitives = node.primitives();

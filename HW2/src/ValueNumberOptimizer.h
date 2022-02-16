@@ -38,12 +38,11 @@ class ValueNumberOptimizer : public IdentityOptimizer
          } else {
             // Not in hash table
             // Add it
-            _vn[node.lhs()] = node.lhs();
-            _hashtable[hash] = node.lhs();
-            // Build modified expression
-            _new_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(
-                     node.lhs(),
-                     rhs));
+            // Note that we could just say it has a definitive value number of
+            // the right hand side. So let's do that.
+            _vn[node.lhs()] = rhs;
+            _hashtable[hash] = rhs;
+            // Don't need modified expression, we can just inline it
          } 
       }
       void visit(ArithmeticPrimitive& node) {
@@ -106,6 +105,30 @@ class ValueNumberOptimizer : public IdentityOptimizer
             }
             // Cannot simplify y / y if y might be 0
          }
+         // Check if we have const expression and replace it
+         if (op != '=' && isNumber(args[0]) && isNumber(args[1])) {
+            std::string arg;
+            if (op == '+') {
+               arg = std::to_string(std::stoull(args[0]) + std::stoull(args[1]));
+            } else if (op == '-') {
+               arg = std::to_string(std::stoull(args[0]) - std::stoull(args[1]));
+            } else if (op == '*') {
+               arg = std::to_string(std::stoull(args[0]) * std::stoull(args[1]));
+            } else if (op == '/') {
+               arg = std::to_string(std::stoull(args[0]) / std::stoull(args[1]));
+            } else if (op == '&') {
+               arg = std::to_string(std::stoull(args[0]) & std::stoull(args[1]));
+            } else if (op == '|') {
+               arg = std::to_string(std::stoull(args[0]) | std::stoull(args[1]));
+            } else {
+               // Assume XOR
+               arg = std::to_string(std::stoull(args[0]) ^ std::stoull(args[1]));
+            }
+            op = '=';
+            // Might need to remap to value number
+            arg = getVN(arg);
+            args = { arg };
+         }
          // Check if expr is in hash table
          std::pair<char, std::vector<std::string>> hash = std::make_pair(op, args);
          if (_hashtable.find(hash) != _hashtable.end()) {
@@ -114,16 +137,17 @@ class ValueNumberOptimizer : public IdentityOptimizer
             _vn[node.lhs()] = _hashtable[hash];
             // By default do NOT add primitive
          } else {
-            // Not in hash table
-            // Add it
-            _vn[node.lhs()] = node.lhs();
-            _hashtable[hash] = node.lhs();
             // Build modified expression
             if (op == '=') {
-               _new_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(
-                        node.lhs(),
-                        args[0]));
+               // Can just assign VN of RHS
+               // Just map it
+               _vn[node.lhs()] = args[0];
+               _hashtable[hash] = args[0];
             } else {
+               // Not in hash table
+               // Add it
+               _vn[node.lhs()] = node.lhs();
+               _hashtable[hash] = node.lhs();
                _new_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(
                   node.lhs(),
                   args[0],
@@ -206,6 +230,9 @@ class ValueNumberOptimizer : public IdentityOptimizer
       void visit(IfElseControl& node) {
          _new_block->setControl(std::make_shared<IfElseControl>(getVN(node.cond()), node.if_branch(), node.else_branch()));
       }
+      void visit(RetControl& node) {
+         _new_block->setControl(std::make_shared<RetControl>(getVN(node.val())));
+      }
       void optimizeChild(BasicBlock& node, std::shared_ptr<BasicBlock>& c) {
          std::string label = node.label();
          std::string child_label = c->label();
@@ -215,6 +242,17 @@ class ValueNumberOptimizer : public IdentityOptimizer
          addNewChild(_label_to_block[label], _label_to_block[child_label]);
          // DO NOT OPTIMIZE CHILD DIRECTLY
          // TODO ADJUST PHI FUNC INPUTS
+      }
+      void optimizeChildren(BasicBlock& node) {
+         std::string label = node.label();
+         // Now optimize every child block recursively
+         // Don't use _new_block here since recursion could change it
+         // Create block first then visit
+         std::vector<std::shared_ptr<BasicBlock>> children = node.children();
+         for (auto & c : children) {
+            optimizeChild(node, c);
+         }
+         buildWeakChildConns(node);
       }
       void visit(BasicBlock& node) {
          // This will do a copy on assignment
@@ -240,8 +278,10 @@ class ValueNumberOptimizer : public IdentityOptimizer
          // Clear VN, hash table
          _vn.clear();
          _hashtable.clear();
+         _htstack.push(_hashtable);
          // Call parent method to optimize
          IdentityOptimizer::visit(node);
+         _htstack.pop();
       }
       void visit(ClassCFG& node) {
          std::string name = node.name();
