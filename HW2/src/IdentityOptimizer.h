@@ -125,6 +125,7 @@ class IdentityOptimizer : public CFGVisitor
          optimizeChildren(node);
       }
       void visit(MethodCFG& node) {
+         _label_to_block.clear();
          std::shared_ptr<BasicBlock> first_block = node.first_block();
          std::vector<std::string> variables = node.variables();
          std::string label = first_block->label();

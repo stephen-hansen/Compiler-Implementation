@@ -7,12 +7,11 @@
 #include "DominatorSolver.h"
 #include "IdentityOptimizer.h"
 
-// TODO helper which iterates direct children for phi node adjustment
-
 // This will iterate dominator tree instead of literal tree
 class ValueNumberOptimizer : public IdentityOptimizer
 {
    private:
+      bool _modified;
       std::map<std::pair<char, std::vector<std::string>>, std::string> _hashtable;
       std::stack<std::map<std::pair<char, std::vector<std::string>>, std::string>> _htstack;
       std::map<std::string, std::string> _vn;
@@ -65,12 +64,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
                // Direct assignment x = y + 0
                op = '=';
                args = { args[0] };
-            } else if (args[0] == args[1]) {
-               // x = y + y = 2 * y
-               op = '*';
-               args = { "2", args[0] };
-               std::sort(args.begin(), args.end());
-            }
+            } 
          } else if (op == '-') {
             // Subtraction identities
             if (args[1] == "0") {
@@ -91,6 +85,14 @@ class ValueNumberOptimizer : public IdentityOptimizer
                // Direct assignment x = y * 1
                op = '=';
                args = { args[0] };
+            } else if (args[0] == "2") {
+               // Replace with addition
+               op = '+';
+               args = { args[1], args[1] };
+            } else if (args[1] == "2") {
+               // Replace with addition
+               op = '+';
+               args = { args[0], args[0] };
             } else if (args[0] == "0" || args[1] == "0") {
                // Direct assignment x = 0 * y = 0 = y * 0
                op = '=';
@@ -169,7 +171,6 @@ class ValueNumberOptimizer : public IdentityOptimizer
                   new_args));
       }
       void visit(PhiPrimitive& node) {
-         // TODO handle
          std::vector<std::pair<std::string, std::string>> args = node.args();
          std::vector<std::pair<std::string, std::string>> new_args;
          std::vector<std::string> args_for_hash;
@@ -233,6 +234,47 @@ class ValueNumberOptimizer : public IdentityOptimizer
       void visit(RetControl& node) {
          _new_block->setControl(std::make_shared<RetControl>(getVN(node.val())));
       }
+      void adjustChildPhi(std::shared_ptr<BasicBlock>& c) {
+         std::string child_label = c->label();
+         // DO NOT OPTIMIZE CHILD DIRECTLY
+         // ADJUST PHI FUNC INPUTS IN BOTH _LABEL_TO_BLOCK AND C
+         std::vector<std::shared_ptr<PrimitiveStatement>> primitives = c->primitives();
+         for (auto& pr : primitives) {
+            PhiPrimitive * p = dynamic_cast<PhiPrimitive*>(pr.get());
+            if (p != nullptr) {
+               std::vector<std::pair<std::string, std::string>> args = p->args();
+               std::vector<std::pair<std::string, std::string>> new_args;
+               for (const auto& arg : args) {
+                  std::string vnarg = getVN(arg.second);
+                  new_args.push_back(std::make_pair(arg.first, vnarg));
+               }
+               if (new_args != args) {
+                  _modified = true;
+                  std::cerr << "Pre-Optimized: " << p->toString() << std::endl;
+                  p->setArgs(new_args);
+                  std::cerr << "Optimized: " << p->toString() << std::endl;
+               }
+            }
+         }
+         primitives = _label_to_block[child_label]->primitives();
+         for (auto& pr : primitives) {
+            PhiPrimitive * p = dynamic_cast<PhiPrimitive*>(pr.get());
+            if (p != nullptr) {
+               std::vector<std::pair<std::string, std::string>> args = p->args();
+               std::vector<std::pair<std::string, std::string>> new_args;
+               for (const auto& arg : args) {
+                  std::string vnarg = getVN(arg.second);
+                  new_args.push_back(std::make_pair(arg.first, vnarg));
+               }
+               if (new_args != args) {
+                  _modified = true;
+                  std::cerr << "Pre-Optimized: " << p->toString() << std::endl;
+                  p->setArgs(new_args);
+                  std::cerr << "Optimized: " << p->toString() << std::endl;
+               }
+            }
+         }
+      }
       void optimizeChild(BasicBlock& node, std::shared_ptr<BasicBlock>& c) {
          std::string label = node.label();
          std::string child_label = c->label();
@@ -240,8 +282,22 @@ class ValueNumberOptimizer : public IdentityOptimizer
             _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, c->params());
          }
          addNewChild(_label_to_block[label], _label_to_block[child_label]);
-         // DO NOT OPTIMIZE CHILD DIRECTLY
-         // TODO ADJUST PHI FUNC INPUTS
+         adjustChildPhi(c);
+      }
+      void buildWeakChildConns(BasicBlock& node) {
+         std::string label = node.label();
+         // Can now build weak connections
+         std::vector<std::weak_ptr<BasicBlock>> weak_children = node.weak_children();
+         for (auto & wc : weak_children) {
+            std::string child_label = wc.lock()->label();
+            if (!_label_to_block.count(child_label)) {
+               _label_to_block[child_label] = std::make_shared<BasicBlock>(child_label, wc.lock()->params());
+            }
+            addExistingChild(_label_to_block[label], _label_to_block[child_label]);
+            std::shared_ptr<BasicBlock> child = wc.lock();
+            adjustChildPhi(child);
+            // No recursion
+         }
       }
       void optimizeChildren(BasicBlock& node) {
          std::string label = node.label();
@@ -259,8 +315,8 @@ class ValueNumberOptimizer : public IdentityOptimizer
          _hashtable = _htstack.top();
          // Optimize with current table
          optimizeBlock(node);
+         // This will fix phi funcs of successors
          optimizeChildren(node); 
-         // TODO directly update children phi nodes
          // Need to traverse using dominator tree
          std::shared_ptr<DomTreeNode> domnode = _domtree[node.label()];
          std::vector<std::shared_ptr<DomTreeNode>> children = domnode->children();
@@ -275,13 +331,20 @@ class ValueNumberOptimizer : public IdentityOptimizer
          _htstack.pop();
       }
       void visit(MethodCFG& node) {
-         // Clear VN, hash table
-         _vn.clear();
-         _hashtable.clear();
-         _htstack.push(_hashtable);
-         // Call parent method to optimize
-         IdentityOptimizer::visit(node);
-         _htstack.pop();
+         _modified = true;
+         while (_modified) {
+            DominatorSolver ds;
+            _domtree = ds.solveTree(std::make_shared<MethodCFG>(node));
+            _modified = false;
+            // Clear VN, hash table
+            _vn.clear();
+            _hashtable.clear();
+            _htstack.push(_hashtable);
+            // Call parent method to optimize
+            IdentityOptimizer::visit(node);
+            _htstack.pop();
+            node = *_new_method;
+         }
       }
       void visit(ClassCFG& node) {
          std::string name = node.name();
@@ -292,16 +355,12 @@ class ValueNumberOptimizer : public IdentityOptimizer
          // Optimize every method
          std::vector<std::shared_ptr<MethodCFG>> methods = node.methods();
          for (auto & m : methods) {
-            DominatorSolver ds;
-            _domtree = ds.solveTree(m);
             m->accept(*this);
             _new_class->appendMethod(_new_method);
          }
       }
       void visit(ProgramCFG& node) {
          std::shared_ptr<MethodCFG> main = node.main_method();
-         DominatorSolver ds;
-         _domtree = ds.solveTree(main);
          // Optimize main
          main->accept(*this);
          // Set main method

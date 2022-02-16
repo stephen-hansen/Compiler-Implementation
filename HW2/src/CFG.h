@@ -245,6 +245,7 @@ class PhiPrimitive : public PrimitiveStatement
          buf << ")";
          return buf.str();
       }
+      void setArgs(std::vector<std::pair<std::string, std::string>> args) { _args = args; }
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
