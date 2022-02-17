@@ -236,6 +236,8 @@ class ValueNumberOptimizer : public IdentityOptimizer
       }
       void visit(IfElseControl& node) {
          std::string cond = getVN(node.cond());
+         /*
+         If/else pruning for constant expressions, dangerous
          if (isNumber(cond)) {
             if (cond != "0") {
                // Go to if branch
@@ -251,48 +253,48 @@ class ValueNumberOptimizer : public IdentityOptimizer
             // Re-run later
             _modified = true;
          } else {
-            // Check if it is a tag check
-            bool is_tagcheck = false;
-            bool use_else = false;
-            std::pair<char, std::vector<std::string>> hash;
-            std::vector<std::string> args;
-            std::string if_label = node.if_branch();
-            std::string else_label = node.else_branch();
-            // badpointer, badmethod, badfield, badnumber
-            if (if_label.find("badpointer") != std::string::npos) {
-               is_tagcheck = true;
-               args = std::vector<std::string>({ cond, "badpointer" });
-               use_else = true;
-            } else if (else_label.find("badmethod") != std::string::npos) {
-               is_tagcheck = true;
-               args = std::vector<std::string>({ cond, "badmethod" });
-            } else if (else_label.find("badfield") != std::string::npos) {
-               is_tagcheck = true;
-               args = std::vector<std::string>({ cond, "badfield" });
-            } else if (else_label.find("badnumber") != std::string::npos) {
-               is_tagcheck = true;
-               args = std::vector<std::string>({ cond, "badnumber" });
-            }
-            if (is_tagcheck) {
-               hash = std::make_pair('#', args);
-               // Have we seen this tag check before
-               if (_hashtable.find(hash) != _hashtable.end()) {
-                  // Replace with jump
-                  if (use_else) {
-                     _new_block->setControl(std::make_shared<JumpControl>(else_label));
-                     _prunelabels.insert(if_label);
-                  } else {
-                     _new_block->setControl(std::make_shared<JumpControl>(if_label));
-                     _prunelabels.insert(else_label);
-                  }
-                  return; 
-               } else {
-                  // Just put in hash table with dummy value
-                  _hashtable[hash] = cond;
-               }
-            }
-            _new_block->setControl(std::make_shared<IfElseControl>(cond, node.if_branch(), node.else_branch()));
+         */
+         // Check if it is a tag check
+         bool is_tagcheck = false;
+         bool use_else = false;
+         std::pair<char, std::vector<std::string>> hash;
+         std::vector<std::string> args;
+         std::string if_label = node.if_branch();
+         std::string else_label = node.else_branch();
+         // badpointer, badmethod, badfield, badnumber
+         if (if_label.find("badpointer") != std::string::npos) {
+            is_tagcheck = true;
+            args = std::vector<std::string>({ cond, "badpointer" });
+            use_else = true;
+         } else if (else_label.find("badmethod") != std::string::npos) {
+            is_tagcheck = true;
+            args = std::vector<std::string>({ cond, "badmethod" });
+         } else if (else_label.find("badfield") != std::string::npos) {
+            is_tagcheck = true;
+            args = std::vector<std::string>({ cond, "badfield" });
+         } else if (else_label.find("badnumber") != std::string::npos) {
+            is_tagcheck = true;
+            args = std::vector<std::string>({ cond, "badnumber" });
          }
+         if (is_tagcheck) {
+            hash = std::make_pair('#', args);
+            // Have we seen this tag check before
+            if (_hashtable.find(hash) != _hashtable.end()) {
+               // Replace with jump
+               if (use_else) {
+                  _new_block->setControl(std::make_shared<JumpControl>(else_label));
+                  _prunelabels.insert(if_label);
+               } else {
+                  _new_block->setControl(std::make_shared<JumpControl>(if_label));
+                  _prunelabels.insert(else_label);
+               }
+               return; 
+            } else {
+               // Just put in hash table with dummy value
+               _hashtable[hash] = cond;
+            }
+         }
+         _new_block->setControl(std::make_shared<IfElseControl>(cond, node.if_branch(), node.else_branch()));
       }
       void visit(RetControl& node) {
          _new_block->setControl(std::make_shared<RetControl>(getVN(node.val())));

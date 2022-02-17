@@ -5,12 +5,10 @@ class FOO [
 ]
 
 main with x, y, z:
-    x = 7
-    y = ^@FOO.m(x)
-    if y: {
-      x = 8
+    if 0: {
+      x = 7
     } else {
-      x = 8
+      x = 9
     }
-    print((y + x))
+    print(x)
 
