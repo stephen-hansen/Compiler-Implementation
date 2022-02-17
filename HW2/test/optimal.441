@@ -1,10 +1,16 @@
+class FOO [
+   fields
+   method m(x) with locals:
+      return x
+]
 
 main with x, y, z:
     x = 7
-    if 1: {
+    y = ^@FOO.m(x)
+    if y: {
       x = 8
     } else {
-      x = 9
+      x = 8
     }
-    print(x)
+    print((y + x))
 

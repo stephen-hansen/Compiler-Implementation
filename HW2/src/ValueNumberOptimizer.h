@@ -178,9 +178,12 @@ class ValueNumberOptimizer : public IdentityOptimizer
          std::vector<std::pair<std::string, std::string>> new_args;
          std::vector<std::string> args_for_hash;
          for (const auto& arg : args) {
-            std::string vnarg = getVN(arg.second);
-            args_for_hash.push_back(vnarg);
-            new_args.push_back(std::make_pair(arg.first, vnarg));
+            // Check if label is still valid
+            if (_domtree.find(arg.first) != _domtree.end()) {
+               std::string vnarg = getVN(arg.second);
+               args_for_hash.push_back(vnarg);
+               new_args.push_back(std::make_pair(arg.first, vnarg));
+            }
          }
          std::sort(args_for_hash.begin(), args_for_hash.end());
          std::pair<char, std::vector<std::string>> hash = std::make_pair('p', args_for_hash);
@@ -245,6 +248,8 @@ class ValueNumberOptimizer : public IdentityOptimizer
                // Prune if
                _prunelabels.insert(node.if_branch());
             }
+            // Re-run later
+            _modified = true;
          } else {
             // Check if it is a tag check
             bool is_tagcheck = false;

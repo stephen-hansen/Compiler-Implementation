@@ -146,14 +146,12 @@ class DominatorSolver
          std::map<std::string, std::shared_ptr<DomTreeNode>> treeNodes;
          // Convert basic blocks to dominator tree blocks
          for (const auto& kv : blockmap) {
-            std::cerr << "We have " << kv.first << std::endl;
             treeNodes[kv.first] = std::make_shared<DomTreeNode>(kv.second);
          }
          // IDom(b) = n means n is parent of b
          for (const auto& kv : idom) {
             std::string b = kv.first;
             std::string n = kv.second;
-            std::cerr << "Looking up " << n << " to add " << b << std::endl;
             treeNodes[n]->addChild(treeNodes[b]);
          }
          // Return all nodes
