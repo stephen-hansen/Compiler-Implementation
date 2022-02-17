@@ -1,14 +1,10 @@
-class FOO [
-   fields
-   method m(x) with locals:
-      return x
-]
+# This code basically plays to the best-case scenario for global value numbering
+# Because GVN will run on SSA form, the initial 4+5 computation should be reused for the later cases, even though it's overwritten at the source level.
 
 main with x, y, z:
-    if 0: {
-      x = 7
-    } else {
-      x = 9
-    }
-    print(x)
-
+    x = (4 + 5)
+    x = 73
+    y = (4 + 5)
+    print(y)
+    z = (4 + 5)
+    print(z)

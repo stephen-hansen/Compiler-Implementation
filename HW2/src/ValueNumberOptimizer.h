@@ -223,7 +223,25 @@ class ValueNumberOptimizer : public IdentityOptimizer
                   getVN(node.val())));
       }
       void visit(LoadPrimitive& node) {
-         _new_block->appendPrimitive(std::make_shared<LoadPrimitive>(node.lhs(), getVN(node.addr())));
+         // Similar to assignment
+         // All loads by the compiler are of constants, can cache
+         // Check if expr is in hash table
+         std::string rhs = getVN(node.addr());
+         std::vector<std::string> arg = { rhs };
+         std::pair<char, std::vector<std::string>> hash = std::make_pair('L', arg);
+         if (_hashtable.find(hash) != _hashtable.end()) {
+            // In hash table
+            // Map node's LHS to hash associated VN
+            _vn[node.lhs()] = _hashtable[hash];
+            // By default do NOT add primitive
+         } else {
+            // Not in hash table
+            // Add it (use LHS since RHS is not a valid operand, i.e. const or reg)
+            _vn[node.lhs()] = node.lhs();
+            _hashtable[hash] = node.lhs();
+            // Need to keep primitive
+            _new_block->appendPrimitive(std::make_shared<LoadPrimitive>(node.lhs(), rhs));
+         } 
       }
       void visit(StorePrimitive& node) {
          _new_block->appendPrimitive(std::make_shared<StorePrimitive>(getVN(node.addr()), getVN(node.val())));
