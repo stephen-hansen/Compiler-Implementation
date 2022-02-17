@@ -1,7 +1,14 @@
+class FOO [
+   fields
+   method m(x, y, z, a, b) with locals:
+      x = (a + b)
+      x = 73
+      y = (a + b)
+      print(y)
+      z = (a + b)
+      print(z)   
+]
+
 main with x, y, z:
-    x = (4 + 5)
-    x = 73
-    y = (4 + 5)
-    print(y)
-    z = (4 + 5)
-    print(z)
+    _ = ^@FOO.m(x, y, z, 4, 5)
+
