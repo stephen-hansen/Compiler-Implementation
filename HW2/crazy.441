@@ -1,25 +1,43 @@
 class FOO [
-   fields a, b, c, d;
+   fields a, b, c, d
    method m1(x, y, z) with locals p, q:
-      z = (x + 5)
+      print(1)
+      p = (2 * z)
       y = (z * 3)
       x = (3 * z)
-      print x
-      print y
+      print(p)
+      print(x)
+      print(y)
+      print(2)
+      x = (y + z)
+      x = (z + 3)
+      print(x)
+      print(3)
+      y = (y + z)
+      print(y)
+      print(4)
       p = (z + 0)
-      print p
+      print(p)
+      print(5)
       y = (x + 7)
       x = (7 + x)
-      print x
-      print y
+      print(x)
+      print(y)
+      print(6)
       q = (z * 1)
-      print q
-      p = (3 * z)
-      print p
       p = (z / 1)
-      print p
-      return 5
+      print(p)
+      print(q)
+      print(7)
+      z = (z + 1)
+      p = (2 * z)
+      x = (x + 1)
+      print(z)
+      print(p)
+      print(x)
+      return 123
 ]
 
 main with:
+   _ = ^@FOO.m1(1, 2, 3)
 
