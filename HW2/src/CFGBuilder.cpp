@@ -1,3 +1,4 @@
+#include <algorithm>
 #include "AST.h"
 #include "CFG.h"
 #include "CFGBuilder.h"
@@ -43,13 +44,15 @@ void CFGBuilder::visit(ArithmeticExpression& node) {
    char op = node.op();
    std::string ret;
    if (op == '+') {
-      // Mask off right operand's tag bit
+      // Mask off max operand's tag bit
       std::string temp = createTemp();
+      std::vector<std::string> args = { r1, r2 };
+      std::sort(args.begin(), args.end());
       // The value chosen is 64-bit max minus 1
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp, r2, '&', "18446744073709551614"));
+      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp, args[1], '&', "18446744073709551614"));
       ret = setReturnName(INTEGER);
-      // Do the addition
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(ret, r1, '+', temp));
+      // Do the addition with min operand
+      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(ret, args[0], '+', temp));
    } else if (op == '-') {
       // Subtract first
       std::string temp = createTemp();
