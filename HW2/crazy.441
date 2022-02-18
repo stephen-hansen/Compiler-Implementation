@@ -2,19 +2,23 @@ class FOO [
    fields a, b, c, d;
    method m1(x, y, z) with locals p, q:
       z = (x + 5)
-      y = (z * 1)
-      x = (1 * z)
-      print y
-      print x
-      x = (z * 2)
-      y = (x + 0)
+      y = (z * 3)
+      x = (3 * z)
       print x
       print y
-      y = (0 + x)
-      z = (z / 1)
+      p = (z + 0)
+      print p
+      y = (x + 7)
+      x = (7 + x)
+      print x
       print y
-      print z
-   return 5
+      q = (z * 1)
+      print q
+      p = (3 * z)
+      print p
+      p = (z / 1)
+      print p
+      return 5
 ]
 
 main with:
