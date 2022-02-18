@@ -1,0 +1,29 @@
+class FOO [
+   fields a, b, c, d
+   method m1(x, y, z) with locals p, q:
+      while x: {
+         p = (x + y)
+         if &this.a: {
+            ifonly &this.c: {
+               p = (p - 1)
+            }
+            x = (x + 2)
+         } else {
+            y = (y + 2)
+            ifonly &this.b: {
+               q = (z - 1)
+            }
+         }
+         ifonly &this.d: {
+            while y: {
+               y = (y - 1)
+            }
+         }
+         x = (x - 1)
+      }
+      z = (z + 1)
+]
+
+main with:
+   _ = ^@FOO.m1(3, 2, 1)
+

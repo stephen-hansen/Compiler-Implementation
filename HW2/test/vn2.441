@@ -1,0 +1,27 @@
+class FOO [
+   fields cond
+   method m1(a, b, c, d, e, f) with locals u, v, w, x, y, z:
+      u = (a + b)
+      v = (c + d)
+      w = (e + f)
+      if &this.cond: {
+         x = (c + d)
+         y = (c + d)
+      } else {
+         u = (a + b)
+         x = (e + f)
+         y = (e + f)
+      }
+      z = (u + y)
+      u = (a + b)
+      print(u)
+      print(v)
+      print(w)
+      print(x)
+      print(y)
+      print(z)
+]
+
+main with:
+   _ = ^@FOO.m1(1, 2, 3, 4, 5, 6)
+
