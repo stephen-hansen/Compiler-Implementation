@@ -66,9 +66,29 @@ std::shared_ptr<ASTExpression> ProgramParser::parseExpr(std::istream & input) {
       for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
       // Check buf, see if it is "this"
       std::string name = buf.str();
+      if (name.length() == 0) {
+         throw ParserException("Invalid empty variable name");
+      }
       // Build appropriate node
       if (name == "this") {
          return std::make_shared<ThisObjectExpression>();
+      } else if (name == "null") {
+         // Expect ":"
+         if (input.peek() == ':') {
+            advanceAndExpectChar(input, ':', "NullObjectExpression colon following null");
+            // Parse class name
+            std::stringstream classBuf;
+            for (; std::isalpha(input.peek()); classBuf << static_cast<char>(input.get()));
+            std::string className = classBuf.str();
+            if (className.length() == 0) {
+               throw ParserException("invalid named class for null expression");
+            }
+            // Build NullObject
+            return std::make_shared<NullObjectExpression>(className);
+         } else {
+            // null as variable not as expression
+            return std::make_shared<VariableIdentifier>(name);
+         }
       } else {
          return std::make_shared<VariableIdentifier>(name);
       }
@@ -162,10 +182,10 @@ std::shared_ptr<ASTExpression> ProgramParser::parseExpr(std::istream & input) {
       // Parse to new object
       // Parse class name
       for (; std::isupper(input.peek()); buf << static_cast<char>(input.get()));
-      if (buf.str().length() == 0) {
+      std::string className = buf.str();
+      if (className.length() == 0) {
          throw ParserException("invalid class name");
       }
-      std::string className = buf.str();
       return std::make_shared<NewObjectExpression>(className);
    } else {
       // If we get an unexpected char or EOF we will hit this
@@ -364,7 +384,7 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
    advanceAndExpectChar(input, '(', "Method missing opening parenthesis");
    // Parse 0-MAXARGS arguments
    int numArgs = 0;
-   std::vector<std::string> args;
+   std::vector<std::pair<std::string, std::string>> args;
    while (numArgs < MAXARGS) {
       skipWhitespace(input);
       char nextChar = input.peek();
@@ -385,15 +405,31 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
       // Parse paramname
       for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
       std::string arg = buf2.str();
-      args.push_back(arg);
+      if (arg.length() == 0) {
+         throw ParserException("Method argument has zero length");
+      }
+      buf2.clear();
+      advanceAndExpectChar(input, ':', "Method parameter missing colon between variable and type");
+      for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+      std::string className = buf2.str();
+      if (className.length() == 0) {
+         throw ParserException("invalid named type");
+      }
+      args.push_back(std::make_pair(arg, className));
       numArgs++;
    }
    skipWhitespace(input);
    advanceAndExpectChar(input, ')', "Method closing parenthesis, or too many parameters");
    advanceAndExpectChar(input, ' ', "Missing space after method params list");
    skipWhitespace(input);
+   advanceAndExpectWord(input, "returning", "Missing returning after method signature");
+   advanceAndExpectChar(input, ' ', "Missing space after returning in method signature");
+   std::stringstream returnbuf;
+   // Parse return type
+   for (; std::isalpha(input.peek()); returnbuf << static_cast<char>(input.get()));
+   std::string return_type = returnbuf.str();
    advanceAndExpectWord(input, "with", "Missing with after method signature");
-   std::vector<std::string> locals;
+   std::vector<std::pair<std::string, std::string>> locals;
    if (input.peek() != ':') {
       advanceAndExpectChar(input, ' ', "Missing space after with in method signature");
       skipWhitespace(input);
@@ -419,7 +455,17 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
          // Parse local name
          for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
          std::string local = buf2.str();
-         locals.push_back(local);
+         if (local.length() == 0) {
+            throw ParserException("Local variable has zero length");
+         }
+         buf2.clear();
+         advanceAndExpectChar(input, ':', "Local variable missing colon between variable and type");
+         for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+         std::string className = buf2.str();
+         if (className.length() == 0) {
+            throw ParserException("invalid named type");
+         }
+         locals.push_back(std::make_pair(local, className));
          numArgs++;
       }
    }
@@ -482,7 +528,7 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
    if (statements.size() == 0) {
       throw ParserException(std::string("Method cannot be empty"));
    }
-   return std::make_shared<MethodDeclaration>(methodname, args, locals, statements); 
+   return std::make_shared<MethodDeclaration>(methodname, return_type, args, locals, statements); 
 }
 
 std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input) {
@@ -500,7 +546,7 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
    skipWhitespace(input);
    advanceAndExpectChar(input, '\n', "Class missing opening newline");
    skipWhitespaceAndNewlines(input);
-   std::vector<std::string> fields;
+   std::vector<std::pair<std::string, std::string>> fields;
    if (input.peek() == 'f') {
       // Parse fields
       advanceAndExpectWord(input, "fields", "Class expected \"fields\" but got something else");
@@ -528,7 +574,17 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
             // Parse field name
             for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
             std::string field = buf2.str();
-            fields.push_back(field);
+            if (field.length() == 0) {
+               throw ParserException("field has zero length");
+            }
+            buf2.clear();
+            advanceAndExpectChar(input, ':', "Field name missing colon between variable and type");
+            for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+            std::string className = buf2.str();
+            if (className.length() == 0) {
+               throw ParserException("invalid named type");
+            }
+            fields.push_back(std::make_pair(field, className));
             numArgs++;
          }
       }
@@ -551,14 +607,18 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
 std::shared_ptr<ProgramDeclaration> ProgramParser::parse(std::istream & input) {
    // Parse all classes
    char firstChar;
-   std::vector<std::shared_ptr<ClassDeclaration>> classes;
+   std::map<std::string, std::shared_ptr<ClassDeclaration>> classes;
    while (true) {
       skipWhitespaceAndNewlines(input);
       firstChar = input.peek();
       if (firstChar == 'c') {
          // Assume it's a class, try to parse
          std::shared_ptr<ClassDeclaration> newClass = parseClass(input);
-         classes.push_back(newClass);
+         std::string key = newClass->name();
+         if (classes.find(key) != classes.end()) {
+            throw ParserException("two classes with same class name, cannot statically type");
+         }
+         classes[key] = newClass;
          // Class will not parse ending whitespace, so parse here, assert newline
          skipWhitespace(input);
          advanceAndExpectChar(input, '\n', "Missing newline at end of class definition");
@@ -572,7 +632,7 @@ std::shared_ptr<ProgramDeclaration> ProgramParser::parse(std::istream & input) {
    advanceAndExpectChar(input, ' ', "Program missing space after main");
    skipWhitespace(input);
    advanceAndExpectWord(input, "with", "Missing with after main");
-   std::vector<std::string> main_locals;
+   std::vector<std::pair<std::string, std::string>> main_locals;
    if (input.peek() != ':') {
       advanceAndExpectChar(input, ' ', "Program missing space after with");
       while (true) {
@@ -583,10 +643,18 @@ std::shared_ptr<ProgramDeclaration> ProgramParser::parse(std::istream & input) {
             break;
          }
          for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
-         if (buf.str().length() == 0) {
+         std::string varname = buf.str();
+         if (varname.length() == 0) {
             throw ParserException("main has invalid named local");
          }
-         main_locals.push_back(buf.str());
+         buf.clear();
+         advanceAndExpectChar(input, ':', "Main local missing colon between variable and type");
+         for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
+         std::string className = buf.str();
+         if (className.length() == 0) {
+            throw ParserException("main has invalid named class");
+         }
+         main_locals.push_back(std::make_pair(varname, className));
          skipWhitespace(input);
          if (input.peek() != ',') {
             break;

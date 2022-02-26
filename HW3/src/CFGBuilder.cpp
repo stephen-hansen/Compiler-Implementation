@@ -178,6 +178,13 @@ void CFGBuilder::visit(ThisObjectExpression& node) {
    _return_values.push(std::make_pair(toRegister("this"), UNKNOWN));
 }
 
+void CFGBuilder::visit(NullObjectExpression& node) {
+   // Don't care about input value
+   _input_values.pop();
+   // Send back int literal 0 (POINTER)
+   _return_values.push(std::make_pair("0", POINTER));
+}
+
 void CFGBuilder::visit(AssignmentStatement& node) {
    std::string destRegister = toRegister(node.variable());
    // Set destRegister as input value
@@ -455,13 +462,13 @@ void CFGBuilder::visit(MethodDeclaration& node) {
    params.push_back(toRegister("this"));
    // Convert method params to remaining params
    for (auto & p : node.params()) {
-      params.push_back(toRegister(p));
+      params.push_back(toRegister(p.first));
    }
    std::shared_ptr<BasicBlock> entry_block = std::make_shared<BasicBlock>(methodName, params);
    _curr_block = entry_block;
    // Initialize every local to 0 (0 << 1 + 1 => 1 as tagged)
    for (auto & l : node.locals()) {
-      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l), std::to_string(tag(0))));
+      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l.first), std::to_string(tag(0))));
    }
    // Recursively visit statements and build
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
@@ -472,12 +479,20 @@ void CFGBuilder::visit(MethodDeclaration& node) {
       s->accept(*this);
    }
    // Append method with ENTRY block (_curr_block will be LAST block here)
-   std::vector<std::string> m_params = node.params();
-   std::vector<std::string> m_locals = node.locals();
+   std::vector<std::pair<std::string, std::string>> m_params = node.params();
+   std::vector<std::string> m_paramnames;
+   for (auto & p : m_params) {
+      m_paramnames.push_back(p.first);
+   }
+   std::vector<std::pair<std::string, std::string>> m_locals = node.locals();
+   std::vector<std::string> m_localnames;
+   for (auto & l : m_locals) {
+      m_localnames.push_back(l.first);
+   }
    std::vector<std::string> variables;
-   variables.reserve(m_params.size() + m_locals.size());
-   variables.insert(variables.end(), m_params.begin(), m_params.end());
-   variables.insert(variables.end(), m_locals.begin(), m_locals.end());
+   variables.reserve(m_paramnames.size() + m_localnames.size());
+   variables.insert(variables.end(), m_paramnames.begin(), m_paramnames.end());
+   variables.insert(variables.end(), m_localnames.begin(), m_localnames.end());
    _curr_class->appendMethod(std::make_shared<MethodCFG>(entry_block, variables));
 }
 
@@ -493,12 +508,16 @@ void CFGBuilder::visit(ClassDeclaration& node) {
       vtable[loc] = methodname;
    }
    // Construct the fields map
-   std::vector<std::string> fields = node.fields();
+   std::vector<std::pair<std::string, std::string>> fields = node.fields();
+   std::vector<std::string> fieldnames;
+   for (auto & fi : fields) {
+      fieldnames.push_back(fi.first);
+   }
    std::vector<unsigned long> fieldsMap;
    fieldsMap.resize(_field_to_map_offset.size());
    std::fill(fieldsMap.begin(), fieldsMap.end(), 0);
    int index = 2;
-   for (auto & f : fields) {
+   for (auto & f : fieldnames) {
       int loc = _field_to_map_offset[f];
       unsigned long offset = index++;
       fieldsMap[loc] = offset;
@@ -513,19 +532,21 @@ void CFGBuilder::visit(ClassDeclaration& node) {
 }
 
 void CFGBuilder::visit(ProgramDeclaration& node) {
-   std::vector<std::shared_ptr<ClassDeclaration>> classes = node.classes();
+   std::map<std::string, std::shared_ptr<ClassDeclaration>> classes = node.classes();
    // Location in field map
    int field_offset = 0;
    // Location in vtable
    int method_offset = 0;
    // Class maps must be built first to understand offsets for fields, methods
-   for (auto & c : classes) {
+   for (auto & cl : classes) {
+      std::shared_ptr<ClassDeclaration> c = cl.second;
       // Build map of class names to allocation sizes
       // Size is always 2 + number of fields
       _class_name_to_alloc_size[c->name()] = 2 + c->fields().size();
       _class_name_to_num_fields[c->name()] = c->fields().size();
       // Build field map
-      for (auto & f : c->fields()) {
+      for (auto & fi : c->fields()) {
+         std::string f = fi.first;
          if (!_field_to_map_offset.count(f)) {
             _field_to_map_offset[f] = field_offset++;
          }
@@ -540,18 +561,23 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    } 
    // Build main method
    std::shared_ptr<BasicBlock> main_block = std::make_shared<BasicBlock>("main");
-   std::vector<std::string> variables = node.main_locals();
+   std::vector<std::pair<std::string, std::string>> variables = node.main_locals();
+   // Convert variables to single vector
+   std::vector<std::string> varnames;
+   for (auto & loc : variables) {
+      varnames.push_back(loc.first);
+   }
    // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
-   _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block, variables));
+   _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block, varnames));
    // Build every class
-   for (auto & c : classes) {
-      c->accept(*this);
+   for (auto & cl : classes) {
+      cl.second->accept(*this);
    }
    resetCounter();
    _curr_block = main_block;
    // Initialize every local to 0 (0 << 1 + 1 => 1 as tagged)
-   for (auto & l : node.main_locals()) {
-      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l), std::to_string(tag(0))));
+   for (auto & loc : node.main_locals()) {
+      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(loc.first), std::to_string(tag(0))));
    }
    // Recursively visit statements and build
    std::vector<std::shared_ptr<ASTStatement>> statements = node.main_statements();

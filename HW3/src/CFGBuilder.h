@@ -122,6 +122,7 @@ class CFGBuilder : public ASTVisitor
       void visit(FieldReadExpression& node);
       void visit(NewObjectExpression& node);
       void visit(ThisObjectExpression& node);
+      void visit(NullObjectExpression& node);
       void visit(AssignmentStatement& node);
       void visit(DontCareAssignmentStatement& node);
       void visit(FieldUpdateStatement& node);

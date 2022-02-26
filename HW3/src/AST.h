@@ -1,6 +1,7 @@
 #ifndef _CS441_AST_H
 #define _CS441_AST_H
 #include <iostream>
+#include <map>
 #include <memory>
 #include <string>
 #include <sstream>
@@ -466,15 +467,16 @@ class MethodDeclaration : public ASTNode
 {
    private:
       std::string _name;
+      std::string _return_type;
       std::vector<std::pair<std::string, std::string>> _params;
       std::vector<std::pair<std::string, std::string>> _locals;
       std::vector<std::shared_ptr<ASTStatement>> _statements;
    public:
-      MethodDeclaration(std::string name, std::vector<std::pair<std::string, std::string>> params, std::vector<std::pair<std::string, std::string>> locals, std::vector<std::shared_ptr<ASTStatement>> statements):
-         _name(name), _params(params), _locals(locals), _statements(statements) {}
+      MethodDeclaration(std::string name, std::string return_type, std::vector<std::pair<std::string, std::string>> params, std::vector<std::pair<std::string, std::string>> locals, std::vector<std::shared_ptr<ASTStatement>> statements):
+         _name(name), _return_type(return_type), _params(params), _locals(locals), _statements(statements) {}
       std::string toString() override {
          std::string out = std::string("{\"type\":\"MethodDeclaration\",\"name\":\"") +
-            _name + std::string("\",\"params\":[");
+            _name + std::string("\",\"return_type\":\"") + _return_type + std::string("\",\"params\":[");
          int i = 0;
          for (auto & p : _params) {
             if (i > 0) {
@@ -508,6 +510,7 @@ class MethodDeclaration : public ASTNode
          v.visit(*this);
       }
       std::string name() { return _name; }
+      std::string return_type() { return _return_type; }
       std::vector<std::pair<std::string, std::string>> params() { return _params; }
       std::vector<std::pair<std::string, std::string>> locals() { return _locals; }
       std::vector<std::shared_ptr<ASTStatement>> statements() { return _statements; }
@@ -556,11 +559,11 @@ class ClassDeclaration : public ASTNode
 class ProgramDeclaration : public ASTNode
 {
    private:
-      std::vector<std::shared_ptr<ClassDeclaration>> _classes;
-      std::vector<std::string> _main_locals;
+      std::map<std::string, std::shared_ptr<ClassDeclaration>> _classes;
+      std::vector<std::pair<std::string, std::string>> _main_locals;
       std::vector<std::shared_ptr<ASTStatement>> _main_statements;
    public:
-      ProgramDeclaration(std::vector<std::shared_ptr<ClassDeclaration>> classes, std::vector<std::string> main_locals, std::vector<std::shared_ptr<ASTStatement>> main_statements):
+      ProgramDeclaration(std::map<std::string, std::shared_ptr<ClassDeclaration>> classes, std::vector<std::pair<std::string, std::string>> main_locals, std::vector<std::shared_ptr<ASTStatement>> main_statements):
          _classes(classes), _main_locals(main_locals), _main_statements(main_statements) {}
       std::string toString() override {
          std::string out = std::string("{\"type\":\"ProgramDeclaration\",\"classes\":[");
@@ -569,7 +572,7 @@ class ProgramDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += c->toString();
+            out += c.second->toString();
             i++;
          }
          out += std::string("],\"main_locals\":[");
@@ -578,7 +581,7 @@ class ProgramDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"") + l + std::string("\"");
+            out += std::string("\"[\"") + l.first + std::string("\",\"") + l.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"main_statements\":[");
@@ -596,8 +599,8 @@ class ProgramDeclaration : public ASTNode
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
-      std::vector<std::shared_ptr<ClassDeclaration>> classes() { return _classes; }
-      std::vector<std::string> main_locals() { return _main_locals; }
+      std::map<std::string, std::shared_ptr<ClassDeclaration>> classes() { return _classes; }
+      std::vector<std::pair<std::string, std::string>> main_locals() { return _main_locals; }
       std::vector<std::shared_ptr<ASTStatement>> main_statements() { return _main_statements; }
 };
 
