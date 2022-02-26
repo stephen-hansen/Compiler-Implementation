@@ -482,7 +482,7 @@ class MethodDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"[\"") + p.first + std::string("\",\"") + p.second + std::string("\"]");
+            out += std::string("[\"") + p.first + std::string("\",\"") + p.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"locals\":[");
@@ -491,7 +491,7 @@ class MethodDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"[\"") + l.first + std::string("\",\"") + l.second + std::string("\"]");
+            out += std::string("[\"") + l.first + std::string("\",\"") + l.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"statements\":[");
@@ -533,7 +533,7 @@ class ClassDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"[\"") + f.first + std::string("\",\"") + f.second + std::string("\"]");
+            out += std::string("[\"") + f.first + std::string("\",\"") + f.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"methods\":[");
@@ -581,7 +581,7 @@ class ProgramDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"[\"") + l.first + std::string("\",\"") + l.second + std::string("\"]");
+            out += std::string("[\"") + l.first + std::string("\",\"") + l.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"main_statements\":[");

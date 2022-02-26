@@ -409,6 +409,7 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
          throw ParserException("Method argument has zero length");
       }
       buf2.clear();
+      buf2.str("");
       advanceAndExpectChar(input, ':', "Method parameter missing colon between variable and type");
       for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
       std::string className = buf2.str();
@@ -428,6 +429,7 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
    // Parse return type
    for (; std::isalpha(input.peek()); returnbuf << static_cast<char>(input.get()));
    std::string return_type = returnbuf.str();
+   advanceAndExpectChar(input, ' ', "Missing space after return type");
    advanceAndExpectWord(input, "with", "Missing with after method signature");
    std::vector<std::pair<std::string, std::string>> locals;
    if (input.peek() != ':') {
@@ -459,6 +461,7 @@ std::shared_ptr<MethodDeclaration> ProgramParser::parseMethod(std::istream & inp
             throw ParserException("Local variable has zero length");
          }
          buf2.clear();
+         buf2.str("");
          advanceAndExpectChar(input, ':', "Local variable missing colon between variable and type");
          for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
          std::string className = buf2.str();
@@ -578,6 +581,7 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
                throw ParserException("field has zero length");
             }
             buf2.clear();
+            buf2.str("");
             advanceAndExpectChar(input, ':', "Field name missing colon between variable and type");
             for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
             std::string className = buf2.str();
@@ -648,6 +652,7 @@ std::shared_ptr<ProgramDeclaration> ProgramParser::parse(std::istream & input) {
             throw ParserException("main has invalid named local");
          }
          buf.clear();
+         buf.str("");
          advanceAndExpectChar(input, ':', "Main local missing colon between variable and type");
          for (; std::isalpha(input.peek()); buf << static_cast<char>(input.get()));
          std::string className = buf.str();
