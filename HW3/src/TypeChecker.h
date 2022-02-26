@@ -24,6 +24,7 @@ class TypeChecker : public ASTVisitor
 {
    private:
       std::string _return_type;
+      std::string _curr_method_return;
       std::string _curr_class;
       std::map<std::string, std::string> _type_environ;
       std::map<std::string, std::shared_ptr<ClassDeclaration>> _classes;
@@ -179,23 +180,117 @@ class TypeChecker : public ASTVisitor
             throw TypeCheckerException("Return type of expression is not the same as the type of the field", node.toSourceString());
          }
       }
-      void visit(IfElseStatement& node);
-      void visit(IfOnlyStatement& node);
-      void visit(WhileStatement& node);
-      void visit(ReturnStatement& node);
-      void visit(PrintStatement& node);
+      void visit(IfElseStatement& node) {
+         // Check cond is int
+         node.cond()->accept(*this);
+         if (_return_type != INT) {
+            throw TypeCheckerException("Condition of if/else statement must be int", node.toSourceString());
+         }
+         // Validate bodies
+         std::vector<std::shared_ptr<ASTStatement>> if_statements = node.if_statements();
+         for (auto & s : if_statements) {
+            s->accept(*this);
+         }
+         std::vector<std::shared_ptr<ASTStatement>> else_statements = node.else_statements();
+         for (auto & s : else_statements) {
+            s->accept(*this);
+         }
+      }
+      void visit(IfOnlyStatement& node) {
+         // Check cond is int
+         node.cond()->accept(*this);
+         if (_return_type != INT) {
+            throw TypeCheckerException("Condition of ifonly statement must be int", node.toSourceString());
+         }
+         // Validate bodies
+         std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
+         for (auto & s : statements) {
+            s->accept(*this);
+         }
+      }
+      void visit(WhileStatement& node) {
+         // Check cond is int
+         node.cond()->accept(*this);
+         if (_return_type != INT) {
+            throw TypeCheckerException("Condition of while statement must be int", node.toSourceString());
+         }
+         // Validate bodies
+         std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
+         for (auto & s : statements) {
+            s->accept(*this);
+         }
+      }
+      void visit(ReturnStatement& node) {
+         // Return statement type must match scope of current method return type
+         node.val()->accept(*this);
+         if (_return_type != INT && _classes.find(_return_type) == _classes.end()) {
+            throw TypeCheckerException("Return type of expression does not exist", node.toSourceString());
+         }
+         if (_return_type != _curr_method_return) {
+            throw TypeCheckerException("Returned type differs from method signature", node.toSourceString());
+         }
+      }
+      void visit(PrintStatement& node) {
+         // Check val is int
+         node.val()->accept(*this);
+         if (_return_type != INT) {
+            throw TypeCheckerException("Value of print statement must be int", node.toSourceString());
+         }
+      }
       void visit(MethodDeclaration& node) {
          _type_environ.clear();
-         // TODO set up type environ
+         // Set up type environ
+         for (auto & p : node.params()) {
+            if (_type_environ.find(p.first) != _type_environ.end()) {
+               throw TypeCheckerException("Parameter defined twice in method", node.name());
+            }
+            _type_environ[p.first] = p.second;
+         }
+         for (auto & l : node.locals()) {
+            if (_type_environ.find(l.first) != _type_environ.end()) {
+               throw TypeCheckerException("Local defined twice in method", node.name());
+            }
+            _type_environ[l.first] = l.second;
+         }
+         _curr_method_return = node.return_type();
+         // Type check each statement
+         std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
+         for (auto & s : statements) {
+            s->accept(*this);
+         }
       }
 
       void visit(ClassDeclaration& node) {
          // Store class name for this statements
          _curr_class = node.name();
+         // Check every method
+         std::map<std::string, std::shared_ptr<MethodDeclaration>> methods = node.methods();
+         for (auto & m : methods) {
+            m.second->accept(*this);
+         }
       }
       void visit(ProgramDeclaration& node) {
          // Save all class declarations
          _classes = node.classes();
+         // Evaluate every class
+         for (auto & c : _classes) {
+            c.second->accept(*this);
+         }
+         // Type check main method
+         _curr_class = "";
+         _type_environ.clear();
+         // We'll assume main returns INT like in C
+         _curr_method_return = INT;
+         for (auto & l : node.main_locals()) {
+            if (_type_environ.find(l.first) != _type_environ.end()) {
+               throw TypeCheckerException("Local defined twice in method", "main");
+            }
+            _type_environ[l.first] = l.second;
+         }
+         std::vector<std::shared_ptr<ASTStatement>> statements = node.main_statements();
+         for (auto & s : statements) {
+            s->accept(*this);
+         }
       }
       void check(std::shared_ptr<ProgramDeclaration> p) {
          p->accept(*this);

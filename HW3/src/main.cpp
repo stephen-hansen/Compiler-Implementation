@@ -1,5 +1,6 @@
 #include <iostream>
 #include "ArithmeticOptimizer.h"
+#include "TypeChecker.h"
 #include "BetterSSAOptimizer.h"
 #include "SSAOptimizer.h"
 #include "ValueNumberOptimizer.h"
@@ -25,6 +26,7 @@ int main(int argc, char ** argv) {
       }
    }
    ProgramParser parser;
+   TypeChecker checker;
    CFGBuilder builder;
    BetterSSAOptimizer better_ssa_optimizer;
    SSAOptimizer ssa_optimizer;
@@ -36,6 +38,7 @@ int main(int argc, char ** argv) {
          std::cout << progAST->toString() << std::endl;
          return 0;
       }
+      checker.check(progAST);
       std::shared_ptr<ProgramCFG> progCFG = builder.build(progAST);
       if (!noSSA) {
          if (simpleSSA) {
@@ -56,6 +59,9 @@ int main(int argc, char ** argv) {
       std::cerr << "Parser error:" << std::endl;
       std::cerr << p.info() << std::endl;
       return 1;
+   } catch (TypeCheckerException & tc) {
+      std::cerr << "Type checker error:" << std::endl;
+      std::cerr << tc.info() << " : " << tc.line() << std::endl;
    }
    return 0;
 }

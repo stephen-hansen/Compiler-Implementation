@@ -7,7 +7,7 @@ class A [
 class B [
    fields y:A 
    method m() returning int with locals:
-   return 0 
+   return 0
 ]
 main with x:A:
 x = @A
