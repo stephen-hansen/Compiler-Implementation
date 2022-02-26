@@ -498,17 +498,17 @@ void CFGBuilder::visit(MethodDeclaration& node) {
 
 void CFGBuilder::visit(ClassDeclaration& node) {
    // Construct the vtable
-   std::vector<std::shared_ptr<MethodDeclaration>> methods = node.methods();
+   std::map<std::string, std::shared_ptr<MethodDeclaration>> methods = node.methods();
    std::vector<std::string> vtable;
    vtable.resize(_method_to_vtable_offset.size());
    std::fill(vtable.begin(), vtable.end(), std::string("0"));
    for (auto & m : methods) {
-      int loc = _method_to_vtable_offset[m->name()];
-      std::string methodname = toMethodName(node.name(), m->name());
+      int loc = _method_to_vtable_offset[m.second->name()];
+      std::string methodname = toMethodName(node.name(), m.second->name());
       vtable[loc] = methodname;
    }
    // Construct the fields map
-   std::vector<std::pair<std::string, std::string>> fields = node.fields();
+   std::map<std::string, std::string> fields = node.fields();
    std::vector<std::string> fieldnames;
    for (auto & fi : fields) {
       fieldnames.push_back(fi.first);
@@ -525,7 +525,7 @@ void CFGBuilder::visit(ClassDeclaration& node) {
    _curr_class = std::make_shared<ClassCFG>(node.name(), vtable, fieldsMap);
    // Build all methods
    for (auto & m : methods) {
-      m->accept(*this);
+      m.second->accept(*this);
    }
    // Add class to program
    _curr_program->appendClass(_curr_class);
@@ -553,7 +553,7 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
       }
       // Build vtable
       for (auto & m : c->methods()) {
-         std::string key = m->name();
+         std::string key = m.second->name();
          if (!_method_to_vtable_offset.count(key)) {
             _method_to_vtable_offset[key] = method_offset++;
          }

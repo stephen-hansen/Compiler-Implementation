@@ -520,10 +520,10 @@ class ClassDeclaration : public ASTNode
 {
    private:
       std::string _name;
-      std::vector<std::pair<std::string, std::string>> _fields;
-      std::vector<std::shared_ptr<MethodDeclaration>> _methods;
+      std::map<std::string, std::string> _fields;
+      std::map<std::string, std::shared_ptr<MethodDeclaration>> _methods;
    public:
-      ClassDeclaration(std::string name, std::vector<std::pair<std::string, std::string>> fields, std::vector<std::shared_ptr<MethodDeclaration>> methods):
+      ClassDeclaration(std::string name, std::map<std::string, std::string> fields, std::map<std::string, std::shared_ptr<MethodDeclaration>> methods):
          _name(name), _fields(fields), _methods(methods) {}
       std::string toString() override {
          std::string out = std::string("{\"type\":\"ClassDeclaration\",\"name\":\"") +
@@ -542,7 +542,7 @@ class ClassDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += m->toString();
+            out += m.second->toString();
             i++;
          }
          out += std::string("]}");
@@ -552,8 +552,8 @@ class ClassDeclaration : public ASTNode
          v.visit(*this);
       }
       std::string name() { return _name; }
-      std::vector<std::pair<std::string, std::string>> fields() { return _fields; }
-      std::vector<std::shared_ptr<MethodDeclaration>> methods() { return _methods; }
+      std::map<std::string, std::string> fields() { return _fields; }
+      std::map<std::string, std::shared_ptr<MethodDeclaration>> methods() { return _methods; }
 };
 
 class ProgramDeclaration : public ASTNode

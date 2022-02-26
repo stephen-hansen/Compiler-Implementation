@@ -549,7 +549,7 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
    skipWhitespace(input);
    advanceAndExpectChar(input, '\n', "Class missing opening newline");
    skipWhitespaceAndNewlines(input);
-   std::vector<std::pair<std::string, std::string>> fields;
+   std::map<std::string, std::string> fields;
    if (input.peek() == 'f') {
       // Parse fields
       advanceAndExpectWord(input, "fields", "Class expected \"fields\" but got something else");
@@ -588,12 +588,15 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
             if (className.length() == 0) {
                throw ParserException("invalid named type");
             }
-            fields.push_back(std::make_pair(field, className));
+            if (fields.find(field) != fields.end()) {
+               throw ParserException("field defined twice in same class");
+            }
+            fields[field] = className;
             numArgs++;
          }
       }
    }
-   std::vector<std::shared_ptr<MethodDeclaration>> methods;
+   std::map<std::string, std::shared_ptr<MethodDeclaration>> methods;
    while (true) {
       skipWhitespaceAndNewlines(input);
       // Parsing methods
@@ -603,7 +606,11 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
       }
       _inside_method_body = true;
       std::shared_ptr<MethodDeclaration> method = parseMethod(input);
-      methods.push_back(method);
+      std::string key = method->name();
+      if (methods.find(key) != methods.end()) {
+         throw ParserException("declared method name twice for given class");
+      }
+      methods[key] = method;
    }
    return std::make_shared<ClassDeclaration>(classname, fields, methods);
 }
