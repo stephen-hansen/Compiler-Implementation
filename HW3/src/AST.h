@@ -37,6 +37,7 @@ class ArithmeticExpression;
 class CallExpression;
 class FieldReadExpression;
 class NewObjectExpression;
+class NullObjectExpression;
 class ThisObjectExpression;
 class AssignmentStatement;
 class DontCareAssignmentStatement;
@@ -61,6 +62,7 @@ class ASTVisitor
       virtual void visit(FieldReadExpression& node) = 0;
       virtual void visit(NewObjectExpression& node) = 0;
       virtual void visit(ThisObjectExpression& node) = 0;
+      virtual void visit(NullObjectExpression& node) = 0;
       virtual void visit(AssignmentStatement& node) = 0;
       virtual void visit(DontCareAssignmentStatement& node) = 0;
       virtual void visit(FieldUpdateStatement& node) = 0;
@@ -232,6 +234,25 @@ class ThisObjectExpression : public ASTExpression
       void accept(ASTVisitor& v) override {
          v.visit(*this);
       }
+};
+
+class NullObjectExpression : public ASTExpression
+{
+   private:
+      std::string _class_name;
+   public:
+      NullObjectExpression(std::string class_name): _class_name(class_name) {}
+      std::string toString() override {
+         return std::string("{\"type\":\"NullObjectExpression\",\"class_name\":\"") + _class_name +
+            std::string("\"}");
+      }
+      std::string toSourceString() override {
+         return std::string("null:") + _class_name;
+      }
+      void accept(ASTVisitor& v) override {
+         v.visit(*this);
+      }
+      std::string class_name() { return _class_name; }
 };
 
 class AssignmentStatement : public ASTStatement
@@ -445,11 +466,11 @@ class MethodDeclaration : public ASTNode
 {
    private:
       std::string _name;
-      std::vector<std::string> _params;
-      std::vector<std::string> _locals;
+      std::vector<std::pair<std::string, std::string>> _params;
+      std::vector<std::pair<std::string, std::string>> _locals;
       std::vector<std::shared_ptr<ASTStatement>> _statements;
    public:
-      MethodDeclaration(std::string name, std::vector<std::string> params, std::vector<std::string> locals, std::vector<std::shared_ptr<ASTStatement>> statements):
+      MethodDeclaration(std::string name, std::vector<std::pair<std::string, std::string>> params, std::vector<std::pair<std::string, std::string>> locals, std::vector<std::shared_ptr<ASTStatement>> statements):
          _name(name), _params(params), _locals(locals), _statements(statements) {}
       std::string toString() override {
          std::string out = std::string("{\"type\":\"MethodDeclaration\",\"name\":\"") +
@@ -459,7 +480,7 @@ class MethodDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"") + p + std::string("\"");
+            out += std::string("\"[\"") + p.first + std::string("\",\"") + p.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"locals\":[");
@@ -468,7 +489,7 @@ class MethodDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"") + l + std::string("\"");
+            out += std::string("\"[\"") + l.first + std::string("\",\"") + l.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"statements\":[");
@@ -487,8 +508,8 @@ class MethodDeclaration : public ASTNode
          v.visit(*this);
       }
       std::string name() { return _name; }
-      std::vector<std::string> params() { return _params; }
-      std::vector<std::string> locals() { return _locals; }
+      std::vector<std::pair<std::string, std::string>> params() { return _params; }
+      std::vector<std::pair<std::string, std::string>> locals() { return _locals; }
       std::vector<std::shared_ptr<ASTStatement>> statements() { return _statements; }
 };
 
@@ -496,10 +517,10 @@ class ClassDeclaration : public ASTNode
 {
    private:
       std::string _name;
-      std::vector<std::string> _fields;
+      std::vector<std::pair<std::string, std::string>> _fields;
       std::vector<std::shared_ptr<MethodDeclaration>> _methods;
    public:
-      ClassDeclaration(std::string name, std::vector<std::string> fields, std::vector<std::shared_ptr<MethodDeclaration>> methods):
+      ClassDeclaration(std::string name, std::vector<std::pair<std::string, std::string>> fields, std::vector<std::shared_ptr<MethodDeclaration>> methods):
          _name(name), _fields(fields), _methods(methods) {}
       std::string toString() override {
          std::string out = std::string("{\"type\":\"ClassDeclaration\",\"name\":\"") +
@@ -509,7 +530,7 @@ class ClassDeclaration : public ASTNode
             if (i > 0) {
                out += std::string(",");
             }
-            out += std::string("\"") + f + std::string("\"");
+            out += std::string("\"[\"") + f.first + std::string("\",\"") + f.second + std::string("\"]");
             i++;
          }
          out += std::string("],\"methods\":[");
@@ -528,7 +549,7 @@ class ClassDeclaration : public ASTNode
          v.visit(*this);
       }
       std::string name() { return _name; }
-      std::vector<std::string> fields() { return _fields; }
+      std::vector<std::pair<std::string, std::string>> fields() { return _fields; }
       std::vector<std::shared_ptr<MethodDeclaration>> methods() { return _methods; }
 };
 
