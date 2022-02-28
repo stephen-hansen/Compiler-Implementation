@@ -1,0 +1,43 @@
+class FOO [
+   fields a:int, b:int, c:int, d:int
+   method m1(x:int, y:int, z:int) returning int with locals p:int, q:int:
+      print(1)
+      p = (2 * z)
+      y = (z * 3)
+      x = (3 * z)
+      print(p)
+      print(x)
+      print(y)
+      print(2)
+      x = (y + z)
+      x = (z + 3)
+      print(x)
+      print(3)
+      y = (y + z)
+      print(y)
+      print(4)
+      p = (z + 0)
+      print(p)
+      print(5)
+      y = (x + 7)
+      x = (7 + x)
+      print(x)
+      print(y)
+      print(6)
+      q = (z * 1)
+      p = (z / 1)
+      print(p)
+      print(q)
+      print(7)
+      z = (z + 1)
+      p = (2 * z)
+      x = (x + 1)
+      print(z)
+      print(p)
+      print(x)
+      return 123
+]
+
+main with:
+   _ = ^@FOO.m1(1, 2, 3)
+
