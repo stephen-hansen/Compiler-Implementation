@@ -455,7 +455,21 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
             _method_to_vtable_offset[key] = method_offset++;
          }
       }
+   } 
+   // Build main method
+   std::shared_ptr<BasicBlock> main_block = std::make_shared<BasicBlock>("main");
+   std::vector<std::pair<std::string, std::string>> variables = node.main_locals();
+   std::map<std::string, std::string> var_to_type;
+   // Convert variables to single vector
+   std::vector<std::string> varnames;
+   for (auto & loc : variables) {
+      varnames.push_back(loc.first);
+      var_to_type[toRegister(loc.first)] = loc.second;
    }
+   // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
+   std::shared_ptr<MethodCFG> main_method = std::make_shared<MethodCFG>(main_block, varnames, var_to_type);
+   _curr_program = std::make_shared<ProgramCFG>(main_method);
+   // Set up class metadata
    for (auto & cl : classes) {
       // Build auxiliary info
       std::shared_ptr<ClassDeclaration> node = cl.second;
@@ -486,19 +500,6 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
       // Add class to program
       _curr_program->appendClass(newclass);
    }
-   // Build main method
-   std::shared_ptr<BasicBlock> main_block = std::make_shared<BasicBlock>("main");
-   std::vector<std::pair<std::string, std::string>> variables = node.main_locals();
-   std::map<std::string, std::string> var_to_type;
-   // Convert variables to single vector
-   std::vector<std::string> varnames;
-   for (auto & loc : variables) {
-      varnames.push_back(loc.first);
-      var_to_type[toRegister(loc.first)] = loc.second;
-   }
-   // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
-   std::shared_ptr<MethodCFG> main_method = std::make_shared<MethodCFG>(main_block, varnames, var_to_type);
-   _curr_program = std::make_shared<ProgramCFG>(main_method);
    // Build every class
    for (auto & cl : classes) {
       cl.second->accept(*this);
