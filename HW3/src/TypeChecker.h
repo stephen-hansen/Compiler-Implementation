@@ -241,18 +241,29 @@ class TypeChecker : public ASTVisitor
          _type_environ.clear();
          // Set up type environ
          for (auto & p : node.params()) {
+            std::string type = p.second;
+            if (type != INT && _classes.find(type) == _classes.end()) {
+               throw TypeCheckerException("Method parameter has invalid type", node.name());
+            }
             if (_type_environ.find(p.first) != _type_environ.end()) {
                throw TypeCheckerException("Parameter defined twice in method", node.name());
             }
-            _type_environ[p.first] = p.second;
+            _type_environ[p.first] = type;
          }
          for (auto & l : node.locals()) {
+            std::string type = l.second;
+            if (type != INT && _classes.find(type) == _classes.end()) {
+               throw TypeCheckerException("Method local has invalid type", node.name());
+            }
             if (_type_environ.find(l.first) != _type_environ.end()) {
                throw TypeCheckerException("Local defined twice in method", node.name());
             }
-            _type_environ[l.first] = l.second;
+            _type_environ[l.first] = type;
          }
          _curr_method_return = node.return_type();
+         if (_curr_method_return != INT && _classes.find(_curr_method_return) == _classes.end()) {
+            throw TypeCheckerException("Method returns invalid type", node.name());
+         }
          // Type check each statement
          std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
          for (auto & s : statements) {
@@ -263,6 +274,14 @@ class TypeChecker : public ASTVisitor
       void visit(ClassDeclaration& node) {
          // Store class name for this statements
          _curr_class = node.name();
+         // Validate fields
+         std::map<std::string, std::string> fields = node.fields();
+         for (auto & f : fields) {
+            std::string type = f.second;
+            if (type != INT && _classes.find(type) == _classes.end()) {
+               throw TypeCheckerException("Field has invalid type in class", _curr_class);
+            }
+         }
          // Check every method
          std::map<std::string, std::shared_ptr<MethodDeclaration>> methods = node.methods();
          for (auto & m : methods) {
@@ -282,10 +301,14 @@ class TypeChecker : public ASTVisitor
          // We'll assume main returns INT like in C
          _curr_method_return = INT;
          for (auto & l : node.main_locals()) {
+            std::string type = l.second;
+            if (type != INT && _classes.find(type) == _classes.end()) {
+               throw TypeCheckerException("Main local has invalid type", "main");
+            }
             if (_type_environ.find(l.first) != _type_environ.end()) {
                throw TypeCheckerException("Local defined twice in method", "main");
             }
-            _type_environ[l.first] = l.second;
+            _type_environ[l.first] = type;
          }
          std::vector<std::shared_ptr<ASTStatement>> statements = node.main_statements();
          for (auto & s : statements) {

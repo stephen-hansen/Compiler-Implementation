@@ -6,8 +6,8 @@ class A [
 ]
 class B [
    fields y:A 
-   method m() returning int with locals:
-   return 0
+   method m() returning A with locals:
+   return null:A
 ]
 main with x:A:
 x = @A
