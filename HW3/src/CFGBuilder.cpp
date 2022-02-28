@@ -6,79 +6,37 @@
 void CFGBuilder::visit(UInt32Literal& node) {
    // Don't care about input value
    _input_values.pop();
-   // Send (tagged) int back as value
-   _return_values.push(std::make_pair(std::to_string(tag(node.val())), INTEGER));
+   // Send int back as value
+   _return_values.push(std::make_pair(std::to_string(node.val()), INT));
 }
 
 void CFGBuilder::visit(VariableIdentifier& node) {
    // Don't care about input value
    _input_values.pop();
    // Send variable back as named register
-   _return_values.push(std::make_pair(toRegister(node.name()), UNKNOWN));
+   std::string reg = toRegister(node.name());
+   _return_values.push(std::make_pair(reg, _curr_method->getType(reg)));
 }
 
 void CFGBuilder::visit(ArithmeticExpression& node) {
    // Visit e1, e2
    _input_values.push(TEMP);
    node.e1()->accept(*this);
-   std::pair<std::string, ReturnType> p1 = _return_values.top();
+   std::pair<std::string, std::string> p1 = _return_values.top();
    std::string r1 = p1.first;
-   ReturnType rt1 = p1.second;
+   std::string rt1 = p1.second;
    _return_values.pop();
    _input_values.push(TEMP);
    node.e2()->accept(*this);
-   std::pair<std::string, ReturnType> p2 = _return_values.top();
+   std::pair<std::string, std::string> p2 = _return_values.top();
    std::string r2 = p2.first;
-   ReturnType rt2 = p2.second;
+   std::string rt2 = p2.second;
    _return_values.pop();
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   // Tagged integer check on each operand
-   // Only need to check if it's not an int
-   if (rt1 != INTEGER) {
-      tagCheck(r1, true, BADNUMBER, NOT_A_NUMBER);
-   }
-   if (rt2 != INTEGER) {
-      tagCheck(r2, true, BADNUMBER, NOT_A_NUMBER);
-   }
    // Derive operation
    char op = node.op();
-   std::string ret;
-   if (op == '+') {
-      // Mask off max operand's tag bit
-      std::string temp = createTemp();
-      std::vector<std::string> args = { r1, r2 };
-      std::sort(args.begin(), args.end());
-      // The value chosen is 64-bit max minus 1
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp, args[1], '&', "18446744073709551614"));
-      ret = setReturnName(INTEGER);
-      // Do the addition with min operand
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(ret, args[0], '+', temp));
-   } else if (op == '-') {
-      // Subtract first
-      std::string temp = createTemp();
-      // The value will be correct but missing tag
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp, r1, '-', r2));
-      // Add back tag bit
-      ret = setReturnName(INTEGER);
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(ret, temp, '+', "1"));
-   } else {
-      // Assume mult or div
-      // Shift left operand right one bit (divide by 2)
-      std::string temp1 = createTemp();
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp1, r1, '/', "2"));
-      // Shift right operand right one bit (divide by 2)
-      std::string temp2 = createTemp();
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp2, r2, '/', "2"));
-      // Do the operation
-      std::string temp3 = createTemp();
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp3, temp1, op, temp2));
-      // Shift back (multiply by 2)
-      std::string temp4 = createTemp();
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp4, temp3, '*', "2"));
-      // Re-tag
-      ret = setReturnName(INTEGER);
-      _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(ret, temp4, '+', "1"));
-   }
+   std::string ret = setReturnName(INT);
+   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(ret, r1, op, r2));
 }
 
 void CFGBuilder::visit(CallExpression& node) {
@@ -95,25 +53,24 @@ void CFGBuilder::visit(CallExpression& node) {
    _input_values.push(TEMP);
    node.obj()->accept(*this);
    std::string receiver = _return_values.top().first;
-   ReturnType receivertype = _return_values.top().second;
+   std::string receivertype = _return_values.top().second;
    _return_values.pop();
+   // Check that receiver is NOT NULL
+   nonzeroCheck(receiver, BADPOINTER, NOT_A_POINTER);
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   // Tag check obj is pointer
-   if (receivertype != POINTER) {
-      tagCheck(receiver, false, BADPOINTER, NOT_A_POINTER);
-   }
    // Load vtable
-   std::string vtable = createTemp();
+   std::string vtable = createTemp(VTBL);
    _curr_block->appendPrimitive(std::make_shared<LoadPrimitive>(vtable, receiver));
    // Lookup method ID corresponding to method string
-   std::string methodAddr = createTemp();
+   std::string methodAddr = createTemp(METHOD);
    std::string method = node.method();
    std::string index = std::to_string(_method_to_vtable_offset[method]);
    _curr_block->appendPrimitive(std::make_shared<GetEltPrimitive>(methodAddr, vtable, index));
-   // Verify that method exists
-   nonzeroCheck(methodAddr, BADMETHOD, NO_SUCH_METHOD);
+   // Type of callee is receivertype
+   // Check type of return from method
+   std::string methodreturn = _program_ast->classes()[receivertype]->methods()[method]->return_type();
    // Call and return
-   std::string ret = setReturnName();
+   std::string ret = setReturnName(methodreturn);
    _curr_block->appendPrimitive(std::make_shared<CallPrimitive>(ret, methodAddr, receiver, regParams));
 }
 
@@ -122,51 +79,35 @@ void CFGBuilder::visit(FieldReadExpression& node) {
    _input_values.push(TEMP);
    node.obj()->accept(*this);
    std::string baseaddr = _return_values.top().first;
-   ReturnType basetype = _return_values.top().second;
+   std::string basetype = _return_values.top().second;
    _return_values.pop();
+   // Check that baseaddr is NOT NULL
+   nonzeroCheck(baseaddr, BADPOINTER, NOT_A_POINTER);
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   // Tag check obj is pointer
-   if (basetype != POINTER) {
-      tagCheck(baseaddr, false, BADPOINTER, NOT_A_POINTER);
-   }
-   // Get field map addr
-   std::string fieldmapaddr = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(fieldmapaddr, baseaddr, '+', "8"));
-   // Load field map, map is guaranteed pointer
-   std::string fieldmap = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<LoadPrimitive>(fieldmap, fieldmapaddr));
    // Lookup field offset corresponding to field string
-   std::string fieldOffset = createTemp();
+   // Just do this directly off type
    std::string field = node.field();
-   std::string index = std::to_string(_field_to_map_offset[field]);
-   _curr_block->appendPrimitive(std::make_shared<GetEltPrimitive>(fieldOffset, fieldmap, index));
-   // Verify that field exists
-   nonzeroCheck(fieldOffset, BADFIELD, NO_SUCH_FIELD);
+   std::string fieldOffset = std::to_string(_curr_program->classes()[basetype]->field_table()[field]);
+   std::string fieldType = _curr_program->classes()[basetype]->getType(field);
    // Get and return
-   std::string ret = setReturnName();
+   std::string ret = setReturnName(fieldType);
    _curr_block->appendPrimitive(std::make_shared<GetEltPrimitive>(ret, baseaddr, fieldOffset));
 }
 
 void CFGBuilder::visit(NewObjectExpression& node) {
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Get the return value early so we can alloc at it
-   std::string ret = setReturnName(POINTER);
-   // Get size to allocate
    std::string classname = node.class_name();
+   std::string ret = setReturnName(classname);
+   // Get size to allocate
    std::string allocSize = std::to_string(_class_name_to_alloc_size[classname]);
    // Allocate the class
    _curr_block->appendPrimitive(std::make_shared<AllocPrimitive>(ret, allocSize));
-   // No tag checks necessary ahead, we know ret is a POINTER
    // Store the vtbl
    _curr_block->appendPrimitive(std::make_shared<StorePrimitive>(ret, toGlobal(toVtable(classname))));
-   // Increment pointer
-   std::string fieldMapAddr = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(fieldMapAddr, ret, '+', "8"));
-   // Store the field map
-   _curr_block->appendPrimitive(std::make_shared<StorePrimitive>(fieldMapAddr, toGlobal(toFieldMap(classname))));
-   // Set all fields to tagged 0
+   // Set all fields to 0
    for (unsigned int i=0; i<_class_name_to_num_fields[classname]; i++) {
-      _curr_block->appendPrimitive(std::make_shared<SetEltPrimitive>(ret, std::to_string(i+2), std::to_string(tag(0))));
+      _curr_block->appendPrimitive(std::make_shared<SetEltPrimitive>(ret, std::to_string(i+1), std::to_string(0)));
    }
 }
 
@@ -175,14 +116,17 @@ void CFGBuilder::visit(ThisObjectExpression& node) {
    _input_values.pop();
    // Send variable back as "this" register
    // Technically should always hold pointer, but no guarantees
-   _return_values.push(std::make_pair(toRegister("this"), UNKNOWN));
+   std::string reg = toRegister("this");
+   std::string classname = _curr_class->name();
+   _return_values.push(std::make_pair(toRegister("this"), classname));
 }
 
 void CFGBuilder::visit(NullObjectExpression& node) {
    // Don't care about input value
    _input_values.pop();
    // Send back int literal 0 (POINTER)
-   _return_values.push(std::make_pair("0", POINTER));
+   std::string classname = node.class_name();
+   _return_values.push(std::make_pair("0", classname));
 }
 
 void CFGBuilder::visit(AssignmentStatement& node) {
@@ -219,26 +163,16 @@ void CFGBuilder::visit(FieldUpdateStatement& node) {
    _input_values.push(TEMP);
    node.obj()->accept(*this);
    std::string baseaddr = _return_values.top().first;
-   ReturnType basetype = _return_values.top().second;
+   std::string basetype = _return_values.top().second;
    _return_values.pop();
+   // Check that baseaddr is NOT NULL
+   nonzeroCheck(baseaddr, BADPOINTER, NOT_A_POINTER);
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   // Tag check obj is pointer
-   if (basetype != POINTER) {
-      tagCheck(baseaddr, false, BADPOINTER, NOT_A_POINTER);
-   }
-   // Get field map addr
-   std::string fieldmapaddr = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(fieldmapaddr, baseaddr, '+', "8"));
-   // Load field map, map is guaranteed pointer
-   std::string fieldmap = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<LoadPrimitive>(fieldmap, fieldmapaddr));
    // Lookup field offset corresponding to field string
-   std::string fieldOffset = createTemp();
+   // Just do this directly off type
    std::string field = node.field();
-   std::string index = std::to_string(_field_to_map_offset[field]);
-   _curr_block->appendPrimitive(std::make_shared<GetEltPrimitive>(fieldOffset, fieldmap, index));
-   // Verify that field exists
-   nonzeroCheck(fieldOffset, BADFIELD, NO_SUCH_FIELD);
+   std::string fieldOffset = std::to_string(_curr_program->classes()[basetype]->field_table()[field]);
+   std::string fieldType = _curr_program->classes()[basetype]->getType(field);
    // Visit val
    _input_values.push(TEMP);
    node.val()->accept(*this);
@@ -252,14 +186,8 @@ void CFGBuilder::visit(IfElseStatement& node) {
    _input_values.push(TEMP);
    node.cond()->accept(*this);
    std::string cond = _return_values.top().first;
-   ReturnType rt = _return_values.top().second;
+   std::string rt = _return_values.top().second;
    _return_values.pop();
-   if (rt != INTEGER) {
-      tagCheck(cond, true, BADNUMBER, NOT_A_NUMBER);
-   }
-   // Convert cond to untagged
-   std::string trueCond = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(trueCond, cond, '/', "2"));
    // Create if true block
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
@@ -272,7 +200,7 @@ void CFGBuilder::visit(IfElseStatement& node) {
    addNewChild(_curr_block, false_block);
    // End current block with if/else
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
+   _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> if_statements = node.if_statements();
@@ -325,14 +253,8 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
    _input_values.push(TEMP);
    node.cond()->accept(*this);
    std::string cond = _return_values.top().first;
-   ReturnType rt = _return_values.top().second;
+   std::string rt = _return_values.top().second;
    _return_values.pop();
-   if (rt != INTEGER) {
-      tagCheck(cond, true, BADNUMBER, NOT_A_NUMBER);
-   }
-   // Convert cond to untagged
-   std::string trueCond = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(trueCond, cond, '/', "2"));
    // Create if true block
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
@@ -345,7 +267,7 @@ void CFGBuilder::visit(IfOnlyStatement& node) {
    addNewChild(_curr_block, false_block);
    // End current block with if/else
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
+   _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
@@ -377,14 +299,8 @@ void CFGBuilder::visit(WhileStatement& node) {
    _input_values.push(TEMP);
    node.cond()->accept(*this);
    std::string cond = _return_values.top().first;
-   ReturnType rt = _return_values.top().second;
+   std::string rt = _return_values.top().second;
    _return_values.pop();
-   if (rt != INTEGER) {
-      tagCheck(cond, true, BADNUMBER, NOT_A_NUMBER);
-   }
-   // Convert cond to untagged
-   std::string trueCond = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(trueCond, cond, '/', "2"));
    // Create if true block
    std::string trueLabel = createLabel();
    std::shared_ptr<BasicBlock> true_block = std::make_shared<BasicBlock>(trueLabel);
@@ -397,7 +313,7 @@ void CFGBuilder::visit(WhileStatement& node) {
    addNewChild(_curr_block, false_block);
    // End current block with if/else
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   _curr_block->setControl(std::make_shared<IfElseControl>(trueCond, trueLabel, falseLabel));
+   _curr_block->setControl(std::make_shared<IfElseControl>(cond, trueLabel, falseLabel));
    // Recursively build true block, push to current scope
    _curr_block = true_block;
    std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
@@ -439,47 +355,44 @@ void CFGBuilder::visit(PrintStatement& node) {
    _input_values.push(TEMP);
    node.val()->accept(*this);
    std::string retValue = _return_values.top().first;
-   ReturnType retType = _return_values.top().second;
+   std::string retType = _return_values.top().second;
    // Print should probably do a tag check and de-convert the value by dividing by 2
    _return_values.pop();
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
-   if (retType != INTEGER) {
-      tagCheck(retValue, true, BADNUMBER, NOT_A_NUMBER);  
-   }
-   std::string temp = createTemp();
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(temp, retValue, '/', "2"));
    // Add print primitive
-   _curr_block->appendPrimitive(std::make_shared<PrintPrimitive>(temp));
+   _curr_block->appendPrimitive(std::make_shared<PrintPrimitive>(retValue));
 }
 
 void CFGBuilder::visit(MethodDeclaration& node) {
    // Reset temporary counter
    resetCounter();
    std::string methodName = toMethodName(_curr_class->name(), node.name());
-   // Build list of parameters
+   // Build list of parameters and types
    std::vector<std::string> params;
+   std::map<std::string, std::string> var_to_type;
    // First param is %this
-   params.push_back(toRegister("this"));
+   std::string thisReg = toRegister("this");
+   params.push_back(thisReg);
+   // %this is an object of the current class
+   var_to_type[thisReg] = _curr_class->name();
    // Convert method params to remaining params
    for (auto & p : node.params()) {
-      params.push_back(toRegister(p.first));
+      // p.first is name, p.second is type
+      std::string reg = toRegister(p.first);
+      params.push_back(reg);
+      var_to_type[reg] = p.second;
    }
    std::shared_ptr<BasicBlock> entry_block = std::make_shared<BasicBlock>(methodName, params);
    _curr_block = entry_block;
-   // Initialize every local to 0 (0 << 1 + 1 => 1 as tagged)
+   // Initialize every local to 0
    for (auto & l : node.locals()) {
-      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(l.first), std::to_string(tag(0))));
-   }
-   // Recursively visit statements and build
-   std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
-   for (auto & s : statements) {
-      if (_curr_block->isUnreachable()) {
-         break;
-      }
-      s->accept(*this);
+      std::string reg = toRegister(l.first);
+      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(reg, std::to_string(0)));
+      var_to_type[reg] = l.second;
    }
    // Append method with ENTRY block (_curr_block will be LAST block here)
    std::vector<std::pair<std::string, std::string>> m_params = node.params();
+   // Combine params
    std::vector<std::string> m_paramnames;
    for (auto & p : m_params) {
       m_paramnames.push_back(p.first);
@@ -493,45 +406,29 @@ void CFGBuilder::visit(MethodDeclaration& node) {
    variables.reserve(m_paramnames.size() + m_localnames.size());
    variables.insert(variables.end(), m_paramnames.begin(), m_paramnames.end());
    variables.insert(variables.end(), m_localnames.begin(), m_localnames.end());
-   _curr_class->appendMethod(std::make_shared<MethodCFG>(entry_block, variables));
+   _curr_method = std::make_shared<MethodCFG>(entry_block, variables, var_to_type);
+   // Recursively visit statements and build
+   std::vector<std::shared_ptr<ASTStatement>> statements = node.statements();
+   for (auto & s : statements) {
+      if (_curr_block->isUnreachable()) {
+         break;
+      }
+      s->accept(*this);
+   }
+   _curr_class->appendMethod(_curr_method);
 }
 
 void CFGBuilder::visit(ClassDeclaration& node) {
-   // Construct the vtable
    std::map<std::string, std::shared_ptr<MethodDeclaration>> methods = node.methods();
-   std::vector<std::string> vtable;
-   vtable.resize(_method_to_vtable_offset.size());
-   std::fill(vtable.begin(), vtable.end(), std::string("0"));
-   for (auto & m : methods) {
-      int loc = _method_to_vtable_offset[m.second->name()];
-      std::string methodname = toMethodName(node.name(), m.second->name());
-      vtable[loc] = methodname;
-   }
-   // Construct the fields map
-   std::map<std::string, std::string> fields = node.fields();
-   std::vector<std::string> fieldnames;
-   for (auto & fi : fields) {
-      fieldnames.push_back(fi.first);
-   }
-   std::vector<unsigned long> fieldsMap;
-   fieldsMap.resize(_field_to_map_offset.size());
-   std::fill(fieldsMap.begin(), fieldsMap.end(), 0);
-   int index = 2;
-   for (auto & f : fieldnames) {
-      int loc = _field_to_map_offset[f];
-      unsigned long offset = index++;
-      fieldsMap[loc] = offset;
-   }
-   _curr_class = std::make_shared<ClassCFG>(node.name(), vtable, fieldsMap);
+   _curr_class = _curr_program->classes()[node.name()];
    // Build all methods
    for (auto & m : methods) {
       m.second->accept(*this);
    }
-   // Add class to program
-   _curr_program->appendClass(_curr_class);
 }
 
 void CFGBuilder::visit(ProgramDeclaration& node) {
+   _program_ast = std::make_shared<ProgramDeclaration>(node);
    std::map<std::string, std::shared_ptr<ClassDeclaration>> classes = node.classes();
    // Location in field map
    int field_offset = 0;
@@ -541,8 +438,8 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
    for (auto & cl : classes) {
       std::shared_ptr<ClassDeclaration> c = cl.second;
       // Build map of class names to allocation sizes
-      // Size is always 2 + number of fields
-      _class_name_to_alloc_size[c->name()] = 2 + c->fields().size();
+      // Size is always 1 + number of fields
+      _class_name_to_alloc_size[c->name()] = 1 + c->fields().size();
       _class_name_to_num_fields[c->name()] = c->fields().size();
       // Build field map
       for (auto & fi : c->fields()) {
@@ -558,26 +455,60 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
             _method_to_vtable_offset[key] = method_offset++;
          }
       }
-   } 
+   }
+   for (auto & cl : classes) {
+      // Build auxiliary info
+      std::shared_ptr<ClassDeclaration> node = cl.second;
+      std::map<std::string, std::shared_ptr<MethodDeclaration>> methods = node->methods();
+      std::vector<std::string> vtable;
+      vtable.resize(_method_to_vtable_offset.size());
+      std::fill(vtable.begin(), vtable.end(), std::string("0"));
+      for (auto & m : methods) {
+         int loc = _method_to_vtable_offset[node->name()];
+         std::string methodname = toMethodName(node->name(), m.second->name());
+         vtable[loc] = methodname;
+      }
+      // Construct the fields map
+      std::map<std::string, std::string> fields = node->fields();
+      std::vector<std::string> fieldnames;
+      std::map<std::string, std::string> field_to_type;
+      for (auto & fi : fields) {
+         fieldnames.push_back(fi.first);
+         field_to_type[fi.first] = fi.second;
+      }
+      std::map<std::string, unsigned long> fieldsMap;
+      int index = 1;
+      for (auto & f : fieldnames) {
+         unsigned long offset = index++;
+         fieldsMap[f] = offset;
+      }
+      std::shared_ptr<ClassCFG> newclass = std::make_shared<ClassCFG>(node->name(), vtable, fieldsMap, field_to_type);
+      // Add class to program
+      _curr_program->appendClass(newclass);
+   }
    // Build main method
    std::shared_ptr<BasicBlock> main_block = std::make_shared<BasicBlock>("main");
    std::vector<std::pair<std::string, std::string>> variables = node.main_locals();
+   std::map<std::string, std::string> var_to_type;
    // Convert variables to single vector
    std::vector<std::string> varnames;
    for (auto & loc : variables) {
       varnames.push_back(loc.first);
+      var_to_type[toRegister(loc.first)] = loc.second;
    }
    // Create method entrypoint with MAIN block (_curr_block will be LAST block here)
-   _curr_program = std::make_shared<ProgramCFG>(std::make_shared<MethodCFG>(main_block, varnames));
+   std::shared_ptr<MethodCFG> main_method = std::make_shared<MethodCFG>(main_block, varnames, var_to_type);
+   _curr_program = std::make_shared<ProgramCFG>(main_method);
    // Build every class
    for (auto & cl : classes) {
       cl.second->accept(*this);
    }
    resetCounter();
    _curr_block = main_block;
-   // Initialize every local to 0 (0 << 1 + 1 => 1 as tagged)
+   _curr_method = main_method;
+   // Initialize every local to 0
    for (auto & loc : node.main_locals()) {
-      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(loc.first), std::to_string(tag(0))));
+      _curr_block->appendPrimitive(std::make_shared<AssignmentPrimitive>(toRegister(loc.first), std::to_string(0)));
    }
    // Recursively visit statements and build
    std::vector<std::shared_ptr<ASTStatement>> statements = node.main_statements();

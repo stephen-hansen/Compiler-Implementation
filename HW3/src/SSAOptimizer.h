@@ -19,7 +19,10 @@ class SSAOptimizer : public IdentityOptimizer
             }
             // Update set counter to new global counter
             _set_counter[reg] = _global_counters[reg];
-            return reg + std::to_string(_global_counters[reg]);
+            std::string name = reg + std::to_string(_global_counters[reg]);
+            std::string ogtype = _new_method->getType(reg);
+            _new_method->setType(name, ogtype);
+            return name;
          }
          return reg;
       }
@@ -29,7 +32,10 @@ class SSAOptimizer : public IdentityOptimizer
             if (!_set_counter.count(reg)) {
                _set_counter[reg] = 0;
             }
-            return reg + std::to_string(_set_counter[reg]);
+            std::string name = reg + std::to_string(_set_counter[reg]);
+            std::string ogtype = _new_method->getType(reg);
+            _new_method->setType(name, ogtype);
+            return name;
          }
          return reg;
       }

@@ -10,10 +10,6 @@
 // Forward declare visitor
 class CFGVisitor;
 
-inline unsigned int tag(unsigned int val) {
-   return (val << 1) + 1;
-}
-
 inline std::string toRegister(std::string name) {
    return std::string("%") + name;
 }
@@ -530,10 +526,13 @@ class MethodCFG
    private:
       std::shared_ptr<BasicBlock> _first_block;
       std::vector<std::string> _variables;
+      std::map<std::string, std::string> _var_to_type;
    public:
-      MethodCFG(std::shared_ptr<BasicBlock> first_block, std::vector<std::string> variables):
+      MethodCFG(std::shared_ptr<BasicBlock> first_block, std::vector<std::string> variables,
+            std::map<std::string, std::string> var_to_type):
          _first_block(first_block),
-         _variables(variables) {}
+         _variables(variables),
+         _var_to_type(var_to_type) {}
       std::string toString() {
          return _first_block->toStringRecursive();
       }
@@ -542,6 +541,9 @@ class MethodCFG
       }
       std::shared_ptr<BasicBlock> first_block() { return _first_block; }
       std::vector<std::string> variables() { return _variables; }
+      std::map<std::string, std::string> var_to_type() { return _var_to_type; }
+      void setType(std::string v, std::string t) { _var_to_type[v] = t; }
+      std::string getType(std::string v) { return _var_to_type[v]; }
 };
 
 class ClassCFG
@@ -550,12 +552,15 @@ class ClassCFG
       std::string _name;
       std::vector<std::shared_ptr<MethodCFG>> _methods;
       std::vector<std::string> _vtable;
-      std::vector<unsigned long> _field_table;
+      std::map<std::string, unsigned long> _field_table;
+      std::map<std::string, std::string> _field_to_type;
    public:
-      ClassCFG(std::string name, std::vector<std::string> vtable, std::vector<unsigned long> field_table):
+      ClassCFG(std::string name, std::vector<std::string> vtable, std::map<std::string, unsigned long> field_table,
+            std::map<std::string, std::string> field_to_type):
          _name(name),
          _vtable(vtable),
-         _field_table(field_table) {}
+         _field_table(field_table),
+         _field_to_type(field_to_type) {}
       std::string dataString() {
          std::stringstream buf;
          // Write vtbl
@@ -567,17 +572,6 @@ class ClassCFG
             }
             buf << m;
             i++; 
-         }
-         buf << " }\n";
-         // Write fields
-         buf << "global array " << toFieldMap(_name) << ": { ";
-         i = 0;
-         for (auto & f : _field_table) {
-            if (i > 0) {
-               buf << ", ";
-            }
-            buf << f;
-            i++;
          }
          buf << " }\n";
          return buf.str();
@@ -593,7 +587,10 @@ class ClassCFG
       std::string name() { return _name; }
       std::vector<std::shared_ptr<MethodCFG>> methods() { return _methods; }
       std::vector<std::string> vtable() { return _vtable; }
-      std::vector<unsigned long> field_table() { return _field_table; }
+      std::map<std::string, unsigned long> field_table() { return _field_table; }
+      std::map<std::string, std::string> field_to_type() { return _field_to_type; }
+      void setType(std::string f, std::string t) { _field_to_type[f] = t; }
+      std::string getType(std::string f) { return _field_to_type[f]; }
       void appendMethod(std::shared_ptr<MethodCFG> m) {
          _methods.push_back(m);
       }

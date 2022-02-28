@@ -469,9 +469,10 @@ class ValueNumberOptimizer : public IdentityOptimizer
       void visit(ClassCFG& node) {
          std::string name = node.name();
          std::vector<std::string> vtable = node.vtable();
-         std::vector<unsigned long> field_table = node.field_table();
+         std::map<std::string, unsigned long> field_table = node.field_table();
+         std::map<std::string, std::string> field_to_type = node.field_to_type();
          // Create new class
-         _new_class = std::make_shared<ClassCFG>(name, vtable, field_table);
+         _new_class = std::make_shared<ClassCFG>(name, vtable, field_table, field_to_type);
          // Optimize every method
          std::vector<std::shared_ptr<MethodCFG>> methods = node.methods();
          for (auto & m : methods) {

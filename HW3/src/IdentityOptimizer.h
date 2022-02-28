@@ -130,18 +130,20 @@ class IdentityOptimizer : public CFGVisitor
          std::vector<std::string> variables = node.variables();
          std::string label = first_block->label();
          std::vector<std::string> params = first_block->params();
+         std::map<std::string, std::string> var_to_type = node.var_to_type();
          // Make first block and new method
          _label_to_block[label] = std::make_shared<BasicBlock>(label, params);
-         _new_method = std::make_shared<MethodCFG>(_label_to_block[label], variables);
+         _new_method = std::make_shared<MethodCFG>(_label_to_block[label], variables, var_to_type);
          // Optimize first block
          first_block->accept(*this);
       }
       void visit(ClassCFG& node) {
          std::string name = node.name();
          std::vector<std::string> vtable = node.vtable();
-         std::vector<unsigned long> field_table = node.field_table();
+         std::map<std::string, unsigned long> field_table = node.field_table();
+         std::map<std::string, std::string> field_to_type = node.field_to_type();
          // Create new class
-         _new_class = std::make_shared<ClassCFG>(name, vtable, field_table);
+         _new_class = std::make_shared<ClassCFG>(name, vtable, field_table, field_to_type);
          // Optimize every method
          std::vector<std::shared_ptr<MethodCFG>> methods = node.methods();
          for (auto & m : methods) {

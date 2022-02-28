@@ -13,13 +13,9 @@
 #define BADFIELD "badfield"
 #define BADMETHOD "badmethod"
 #define TEMP ""
-
-enum ReturnType
-{
-   INTEGER,
-   POINTER,
-   UNKNOWN
-};
+#define INT "int"
+#define VTBL "vtbl"
+#define METHOD "methodptr"
 
 class CFGBuilderException : public std::exception
 {
@@ -38,11 +34,13 @@ class CFGBuilder : public ASTVisitor
       std::map<std::string, unsigned long> _class_name_to_num_fields;
       std::map<std::string, unsigned long> _field_to_map_offset;
       std::map<std::string, unsigned long> _method_to_vtable_offset;
-      std::stack<std::pair<std::string, ReturnType>> _return_values;
+      std::stack<std::pair<std::string, std::string>> _return_values;
       std::stack<std::string> _input_values;
       std::shared_ptr<BasicBlock> _curr_block;
+      std::shared_ptr<MethodCFG> _curr_method;
       std::shared_ptr<ClassCFG> _curr_class;
       std::shared_ptr<ProgramCFG> _curr_program;
+      std::shared_ptr<ProgramDeclaration> _program_ast;
       void resetCounter(std::string name = "") {
          _name_counter[name] = 1;
       }
@@ -52,50 +50,22 @@ class CFGBuilder : public ASTVisitor
          }
          return name + std::to_string(_name_counter[name]++);
       }
-      std::string createTemp() {
-         return toRegister(createName());
+      std::string createTemp(std::string type) {
+         std::string reg = toRegister(createName());
+         _curr_class->setType(reg, type);
+         return reg;
       }
       std::string createLabel() {
          return createName("l");
       }
-      std::string setReturnName(ReturnType t = UNKNOWN) {
+      std::string setReturnName(std::string retType) {
          std::string ret = _input_values.top();
          _input_values.pop();
          if (ret == TEMP) {
-            ret = createTemp();
+            ret = createTemp(retType);
          }
-         _return_values.push(std::make_pair(ret, t));
+         _return_values.push(std::make_pair(ret, retType));
          return ret;
-      }
-      // reg : register to check
-      // expectedTag : should reg end in 1 (true) or 0 (false)
-      // failLabel : label to jump to on failure
-      // failMsg : type of exception to throw
-      void tagCheck(std::string reg, bool expectedTag, std::string failLabel, std::string failMsg) {
-         // Add check to current block
-         std::string check = createTemp();
-         _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(check, reg, '&', "1"));
-         // Build failure block
-         std::string failureBlockLabel = createName(failLabel);
-         std::shared_ptr<BasicBlock> failureBlock = std::make_shared<BasicBlock>(failureBlockLabel);
-         failureBlock->setControl(std::make_shared<FailControl>(failMsg));
-         // Build success block
-         std::string nextBlockLabel = createLabel();
-         std::shared_ptr<BasicBlock> successBlock = std::make_shared<BasicBlock>(nextBlockLabel);
-         if (expectedTag) {
-            // True is nextBlock, False is failureBlock
-            std::swap(failureBlock, successBlock);
-            std::swap(failureBlockLabel, nextBlockLabel);
-         } 
-         // curr block owns success and failure
-         addNewChild(_curr_block, failureBlock);
-         addNewChild(_curr_block, successBlock);
-         _curr_block->setControl(std::make_shared<IfElseControl>(check, failureBlockLabel, nextBlockLabel));
-         // Remove current block and replace with success block
-         if (expectedTag) {
-            std::swap(failureBlock, successBlock);
-         }
-         _curr_block = successBlock;
       }
       void nonzeroCheck(std::string reg, std::string failLabel, std::string failMsg) {
          // Build failure block
