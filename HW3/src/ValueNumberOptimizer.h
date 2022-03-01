@@ -284,6 +284,9 @@ class ValueNumberOptimizer : public IdentityOptimizer
             is_tagcheck = true;
             args = std::vector<std::string>({ cond, "badpointer" });
             use_else = true;
+         } else if (else_label.find("badpointer") != std::string::npos) {
+            is_tagcheck = true;
+            args = std::vector<std::string>({ "badpointer", cond });
          } else if (else_label.find("badmethod") != std::string::npos) {
             is_tagcheck = true;
             args = std::vector<std::string>({ cond, "badmethod" });
