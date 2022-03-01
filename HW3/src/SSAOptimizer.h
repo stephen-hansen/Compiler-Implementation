@@ -178,7 +178,7 @@ class SSAOptimizer : public IdentityOptimizer
          _set_counter.clear();
          // Grab the method variables
          std::vector<std::string> variables = node.variables();
-         // Call parent method to add in the versioning
+         // Call parent method to add in the versioning, set _new_method
          IdentityOptimizer::visit(node);
          // Post-process phi statements
          for (auto & kv : _label_to_block) {
@@ -188,7 +188,9 @@ class SSAOptimizer : public IdentityOptimizer
             // Dumb hack to make parameters first "version"
             for (auto & p : block->params()) {
                if (isVariable(p)) {
+                  std::string ogtype = _new_method->getType(p);
                   p += "0";
+                  _new_method->setType(p, ogtype);
                }
                newParams.push_back(p);
             }

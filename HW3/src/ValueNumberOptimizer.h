@@ -300,7 +300,7 @@ class ValueNumberOptimizer : public IdentityOptimizer
          if (is_tagcheck) {
             hash = std::make_pair('#', args);
             // Have we seen this tag check before, or is it redundant
-            if (isNumber(cond)) {
+            if (isNumber(cond) || cond == "%this0") {
                if (cond == "0") {
                   // Use else
                   _new_block->setControl(std::make_shared<JumpControl>(else_label));

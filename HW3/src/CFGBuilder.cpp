@@ -56,7 +56,9 @@ void CFGBuilder::visit(CallExpression& node) {
    std::string receivertype = _return_values.top().second;
    _return_values.pop();
    // Check that receiver is NOT NULL
-   nonzeroCheck(receiver, BADPOINTER, NOT_A_POINTER);
+   if (receiver != "%this") {
+      nonzeroCheck(receiver, BADPOINTER, NOT_A_POINTER);
+   }
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Load vtable
    std::string vtable = createTemp(VTBL);
@@ -82,7 +84,9 @@ void CFGBuilder::visit(FieldReadExpression& node) {
    std::string basetype = _return_values.top().second;
    _return_values.pop();
    // Check that baseaddr is NOT NULL
-   nonzeroCheck(baseaddr, BADPOINTER, NOT_A_POINTER);
+   if (baseaddr != "%this") {
+      nonzeroCheck(baseaddr, BADPOINTER, NOT_A_POINTER);
+   }
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Lookup field offset corresponding to field string
    // Just do this directly off type
@@ -166,7 +170,9 @@ void CFGBuilder::visit(FieldUpdateStatement& node) {
    std::string basetype = _return_values.top().second;
    _return_values.pop();
    // Check that baseaddr is NOT NULL
-   nonzeroCheck(baseaddr, BADPOINTER, NOT_A_POINTER);
+   if (baseaddr != "%this") {
+      nonzeroCheck(baseaddr, BADPOINTER, NOT_A_POINTER);
+   }
    // _curr_block->appendPrimitive(std::make_shared<Comment>(node.toSourceString()));
    // Lookup field offset corresponding to field string
    // Just do this directly off type
