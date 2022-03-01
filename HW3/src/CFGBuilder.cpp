@@ -478,7 +478,7 @@ void CFGBuilder::visit(ProgramDeclaration& node) {
       vtable.resize(_method_to_vtable_offset.size());
       std::fill(vtable.begin(), vtable.end(), std::string("0"));
       for (auto & m : methods) {
-         int loc = _method_to_vtable_offset[node->name()];
+         int loc = _method_to_vtable_offset[m.second->name()];
          std::string methodname = toMethodName(node->name(), m.second->name());
          vtable[loc] = methodname;
       }
