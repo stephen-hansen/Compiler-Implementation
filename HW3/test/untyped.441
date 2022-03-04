@@ -1,30 +1,30 @@
 class LISTNODE [
-   fields val:int, next:LISTNODE, isnull:int
-   method getNext() returning LISTNODE with locals:
+   fields val, next, isnull
+   method getNext() with locals:
       return &this.next
-   method getVal() returning int with locals:
+   method getVal() with locals:
       return &this.val
-   method isNull() returning int with locals:
+   method isNull() with locals:
       return &this.isnull
 ]
 class STACK [
-   fields list:LISTNODE
-   method init() returning STACK with locals stk:STACK, node:LISTNODE:
+   fields list
+   method init() with locals stk, node:
       stk = @STACK
       node = @LISTNODE
       !node.isnull = 1
       !stk.list = node
       return stk
-   method push(v:int) returning int with locals tmp:LISTNODE:
+   method push(v) with locals tmp:
       tmp = @LISTNODE
       !tmp.isnull = 0
       !tmp.val = v
       !tmp.next = &this.list
       !this.list = tmp
       return 0
-   method empty() returning int with locals:
+   method empty() with locals:
       return ^&this.list.isNull()
-   method pop() returning int with locals tmp:int:
+   method pop() with locals tmp:
       if ^&this.list.isNull(): {
          return 0 
       } else {
@@ -34,13 +34,13 @@ class STACK [
       }
 ]
 class QUEUE [
-   fields sA:STACK, sB:STACK
-   method init() returning QUEUE with locals queue:QUEUE:
+   fields sA, sB
+   method init() with locals queue:
       queue = @QUEUE
       !queue.sA = ^@STACK.init()
       !queue.sB = ^@STACK.init()
       return queue
-   method push(v:int) returning int with locals:
+   method push(v) with locals:
       while (1 - ^&this.sA.empty()): {
          _ = ^&this.sB.push(^&this.sA.pop())
       }
@@ -49,14 +49,14 @@ class QUEUE [
          _ = ^&this.sA.push(^&this.sB.pop())
       }
       return 0
-   method empty() returning int with locals:
+   method empty() with locals:
       return ^&this.sA.empty()
-   method pop() returning int with locals:
+   method pop() with locals:
       return ^&this.sA.pop()
 ]
 class FIB [
    fields
-   method fib(n:int) returning int with locals:
+   method fib(n) with locals:
       ifonly n: {
          ifonly (n - 1): {
             return (^this.fib((n - 1)) + ^this.fib((n - 2)))
@@ -66,10 +66,10 @@ class FIB [
       return 0
 ]
 
-main with i:int, stk:STACK, queue:QUEUE, fib:FIB:
+main with i, stk, queue, fib:
    stk = ^@STACK.init()
    queue = ^@QUEUE.init()
-   fib = null:FIB
+   fib = 0
    i = 20
    while i: {
       _ = ^queue.push(i)
