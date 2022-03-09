@@ -1,0 +1,27 @@
+class FOO [
+   fields cond:int
+   method m1(a:int, b:int, c:int, d:int, e:int, f:int) returning int with locals u:int, v:int, w:int, x:int, y:int, z:int:
+      u = (a + b)
+      v = (c + d)
+      w = (e + f)
+      if &this.cond: {
+         x = (c + d)
+         y = (c + d)
+      } else {
+         u = (a + b)
+         x = (e + f)
+         y = (e + f)
+      }
+      z = (u + y)
+      u = (a + b)
+      print(u)
+      print(v)
+      print(w)
+      print(x)
+      print(y)
+      print(z)
+]
+
+main with:
+   _ = ^@FOO.m1(1, 2, 3, 4, 5, 6)
+

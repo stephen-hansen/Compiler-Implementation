@@ -1,0 +1,87 @@
+class LISTNODE [
+   fields val:int, next:LISTNODE, isnull:int
+   method getNext() returning LISTNODE with locals:
+      return &this.next
+   method getVal() returning int with locals:
+      return &this.val
+   method isNull() returning int with locals:
+      return &this.isnull
+]
+class STACK [
+   fields list:LISTNODE
+   method init() returning STACK with locals stk:STACK, node:LISTNODE:
+      stk = @STACK
+      node = @LISTNODE
+      !node.isnull = 1
+      !stk.list = node
+      return stk
+   method push(v:int) returning int with locals tmp:LISTNODE:
+      tmp = @LISTNODE
+      !tmp.isnull = 0
+      !tmp.val = v
+      !tmp.next = &this.list
+      !this.list = tmp
+      return 0
+   method empty() returning int with locals:
+      return ^&this.list.isNull()
+   method pop() returning int with locals tmp:int:
+      if ^&this.list.isNull(): {
+         return 0 
+      } else {
+         tmp = ^&this.list.getVal()
+         !this.list = ^&this.list.getNext()
+         return tmp
+      }
+]
+class QUEUE [
+   fields sA:STACK, sB:STACK
+   method init() returning QUEUE with locals queue:QUEUE:
+      queue = @QUEUE
+      !queue.sA = ^@STACK.init()
+      !queue.sB = ^@STACK.init()
+      return queue
+   method push(v:int) returning int with locals:
+      while (1 - ^&this.sA.empty()): {
+         _ = ^&this.sB.push(^&this.sA.pop())
+      }
+      _ = ^&this.sA.push(v)
+      while (1 - ^&this.sB.empty()): {
+         _ = ^&this.sA.push(^&this.sB.pop())
+      }
+      return 0
+   method empty() returning int with locals:
+      return ^&this.sA.empty()
+   method pop() returning int with locals:
+      return ^&this.sA.pop()
+]
+class FIB [
+   fields
+   method fib(n:int) returning int with locals:
+      ifonly n: {
+         ifonly (n - 1): {
+            return (^this.fib((n - 1)) + ^this.fib((n - 2)))
+         }
+         return 1
+      }
+      return 0
+]
+
+main with i:int, stk:STACK, queue:QUEUE, fib:FIB:
+   stk = ^@STACK.init()
+   queue = ^@QUEUE.init()
+   fib = null:FIB
+   i = 20
+   while i: {
+      _ = ^queue.push(i)
+      _ = ^stk.push(i)
+      i = (i - 1)
+   }
+   while (1 - ^queue.empty()): {
+      print(^queue.pop())
+   }
+   while (1 - ^stk.empty()): {
+      print(^stk.pop())
+   }
+   fib = @FIB
+   print(^fib.fib(20))
+
