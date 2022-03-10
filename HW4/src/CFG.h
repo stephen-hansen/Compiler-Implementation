@@ -1,5 +1,6 @@
 #ifndef _CS_441_CFG_H
 #define _CS_441_CFG_H
+#include <algorithm>
 #include <map>
 #include <memory>
 #include <iostream>
@@ -459,6 +460,9 @@ class BasicBlock
       }
       void appendPrimitive(std::shared_ptr<PrimitiveStatement> ps) {
          _primitives.push_back(ps);
+      }
+      void removePrimitive(std::shared_ptr<PrimitiveStatement> ps) {
+         _primitives.erase(std::remove(_primitives.begin(), _primitives.end(), ps), _primitives.end());
       }
       void setControl(std::shared_ptr<ControlStatement> c) {
          _control = c;
