@@ -17,24 +17,71 @@ class VectorOptimizer : public IdentityOptimizer
       std::shared_ptr<BasicBlock> SLP_extract(std::shared_ptr<BasicBlock> B) {
          PackSet_t P;
          P = find_adj_refs(B, P);
-         P = extend_packlist(B, P);
-         P = combine_packs(P);
-         return schedule(B, _new_block, P);
+         for (const auto & p : P) {
+            for (const auto & s : p) {
+               std::cout << s->toString() << std::endl;
+            }
+            std::cout << std::endl;
+         }
+         //P = extend_packlist(B, P);
+         //P = combine_packs(P);
+         //return schedule(B, _new_block, P);
+         return _new_block;
       }
       bool isomorphic(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          // TODO return true if s1 and s2 are same statement type
+         // Both must be arithmetic statements with same OP
+         ArithmeticPrimitive* a1 = dynamic_cast<ArithmeticPrimitive*>(s1.get());
+         ArithmeticPrimitive* a2 = dynamic_cast<ArithmeticPrimitive*>(s2.get());
+         return (a1 != nullptr && a2 != nullptr && (a1->op() == a2->op()));
       }
       bool independent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          // TODO return true if s1 and s2 do not depend on each other
+         // s1 must not refer to s2
+         // s2 must not refer to s1
+         ArithmeticPrimitive* a1 = dynamic_cast<ArithmeticPrimitive*>(s1.get());
+         ArithmeticPrimitive* a2 = dynamic_cast<ArithmeticPrimitive*>(s2.get());
+         return (a1->op1() != a2->lhs() && a1->op2() != a2->lhs()
+               && a2->op1() != a1->lhs() && a2->op2() != a1->lhs());
       }
       bool stmts_can_pack(std::shared_ptr<BasicBlock> B, PackSet_t P, std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
+         if (isomorphic(s1, s2)) {
+            if (independent(s1, s2)) {
+               bool allt1 = true;
+               for (const auto & p : P) {
+                  std::shared_ptr<PrimitiveStatement> t = p[0];
+                  if (t == s1) {
+                     allt1 = false;
+                     break;
+                  }
+               }
+               if (allt1) {
+                  bool allt2 = true;
+                  for (const auto & p : P) {
+                     std::shared_ptr<PrimitiveStatement> t = p[1];
+                     if (t == s2) {
+                        allt2 = false;
+                        break;
+                     }
+                  }
+                  if (allt2) {
+                     // Assume alignment works
+                     return true;
+                  }
+               }
+            }
+         }
+         return false;
       }
       PackSet_t find_adj_refs(std::shared_ptr<BasicBlock> B, PackSet_t P) {
          for (const auto & s1 : B->primitives()) {
             for (const auto & s2 : B->primitives()) {
                if (s1 != s2) {
                   if (stmts_can_pack(B, P, s1, s2)) {
-                     P.insert(Pack_t({ s1, s2 }));
+                     // Avoid inserting same pack twice
+                     if (P.find(Pack_t({ s2, s1 })) == P.end()) {
+                        P.insert(Pack_t({ s1, s2 }));
+                     }
                   }
                }
             }
@@ -42,6 +89,14 @@ class VectorOptimizer : public IdentityOptimizer
          return P;
       }
       PackSet_t follow_use_defs(std::shared_ptr<BasicBlock> B, PackSet_t P, Pack_t p) {
+         // TODO
+         std::shared_ptr<PrimitiveStatement> s1 = p[0];
+         std::shared_ptr<PrimitiveStatement> s2 = p[1];
+         // Get x1 args
+         // Get x2 args
+         unsigned long m = 2;
+         for (unsigned long j=0; j<m; j++) {
+         }
       }
       PackSet_t follow_def_uses(std::shared_ptr<BasicBlock> B, PackSet_t P, Pack_t p) {
       }
@@ -146,11 +201,22 @@ class VectorOptimizer : public IdentityOptimizer
          return B2;
       }
    public:
-      void visit(AssignmentPrimitive& node) {
-         // TODO
+      void optimizeBlock(BasicBlock& node) {
+         std::string label = node.label();
+         if (!_label_to_block.count(label)) {
+            _label_to_block[label] = std::make_shared<BasicBlock>(label, node.params());
+         }
+         _new_block = _label_to_block[label];
+         // Optimize each primitive
+         // Call SLP extract
+         SLP_extract(std::make_shared<BasicBlock>(node));
+         // Optimize control
+         node.control()->accept(*this);
       }
-      void visit(ArithmeticPrimitive& node) {
-         // TODO
+
+      void visit(BasicBlock& node) {
+         optimizeBlock(node);
+         optimizeChildren(node);
       }
 };
 

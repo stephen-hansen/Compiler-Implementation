@@ -4,11 +4,12 @@
 #include "BetterSSAOptimizer.h"
 #include "SSAOptimizer.h"
 #include "ValueNumberOptimizer.h"
+#include "VectorOptimizer.h"
 #include "CFGBuilder.h"
 #include "Parser.h"
 
 int main(int argc, char ** argv) {
-   bool printAST = false, noSSA = false, noopt = false, simpleSSA = false, noVN = false;
+   bool printAST = false, noSSA = false, noopt = false, simpleSSA = false, noVN = false, vectorize = false;
    for (int i=0; i<argc; i++) {
       std::string arg = argv[i];
       if (arg == "-printAST") {
@@ -23,6 +24,8 @@ int main(int argc, char ** argv) {
          simpleSSA = true;
       } else if (arg == "-noVN") {
          noVN = true;
+      } else if (arg == "-vectorize") {
+         vectorize = true;
       }
    }
    ProgramParser parser;
@@ -32,6 +35,7 @@ int main(int argc, char ** argv) {
    SSAOptimizer ssa_optimizer;
    ArithmeticOptimizer peephole_optimizer;
    ValueNumberOptimizer vn_optimizer;
+   VectorOptimizer vector_optimizer;
    try {
       std::shared_ptr<ProgramDeclaration> progAST = parser.parse(std::cin);
       if (printAST) {
@@ -52,6 +56,11 @@ int main(int argc, char ** argv) {
       }
       if (!noVN) {
          progCFG = vn_optimizer.optimize(progCFG);
+      }
+      if (vectorize) {
+         // TODO update progCFG
+         vector_optimizer.optimize(progCFG);
+         return 1;
       }
       std::cout << progCFG->toString() << std::endl;
       return 0;
