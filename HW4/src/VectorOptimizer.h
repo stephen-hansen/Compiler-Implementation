@@ -14,10 +14,32 @@ class VectorOptimizer : public IdentityOptimizer
 {
    private:
       std::set<std::string> _scheduled;
+      std::string getLHS(std::shared_ptr<PrimitiveStatement> s) {
+         GetEltPrimitive* ge = dynamic_cast<GetEltPrimitive*>(s.get());
+         if (ge != nullptr) {
+            return ge->lhs();
+         }
+         ArithmeticPrimitive *a = dynamic_cast<ArithmeticPrimitive*>(s.get());
+         if (a != nullptr) {
+            return a->lhs();
+         }
+         return "";
+      }
+      std::vector<std::string> getRHS(std::shared_ptr<PrimitiveStatement> s) {
+         GetEltPrimitive* ge = dynamic_cast<GetEltPrimitive*>(s.get());
+         if (ge != nullptr) {
+            return { ge->arr(), ge->index() };
+         }
+         ArithmeticPrimitive *a = dynamic_cast<ArithmeticPrimitive*>(s.get());
+         if (a != nullptr) {
+            return { a->op1(), a->op2() };
+         }
+         return {};
+      }
       std::shared_ptr<BasicBlock> SLP_extract(std::shared_ptr<BasicBlock> B) {
          PackSet_t P;
          P = find_adj_refs(B, P); 
-         //P = extend_packlist(B, P);
+         P = extend_packlist(B, P);
          P = combine_packs(P);
          for (const auto & p : P) {
             for (const auto & s : p) {
@@ -29,18 +51,37 @@ class VectorOptimizer : public IdentityOptimizer
          return _new_block;
       }
       bool isomorphic(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
-         // Both must be GetElt statements
-         GetEltPrimitive* a1 = dynamic_cast<GetEltPrimitive*>(s1.get());
-         GetEltPrimitive* a2 = dynamic_cast<GetEltPrimitive*>(s2.get());
-         return (a1 != nullptr && a2 != nullptr);
+         // Both must be GetElt or Arithmetic
+         GetEltPrimitive* ge1 = dynamic_cast<GetEltPrimitive*>(s1.get());
+         GetEltPrimitive* ge2 = dynamic_cast<GetEltPrimitive*>(s2.get());
+         if (ge1 != nullptr && ge2 != nullptr) {
+            return true;
+         }
+         ArithmeticPrimitive *a1 = dynamic_cast<ArithmeticPrimitive*>(s1.get());
+         ArithmeticPrimitive *a2 = dynamic_cast<ArithmeticPrimitive*>(s2.get());
+         if (a1 != nullptr && a2 != nullptr) {
+            return a1->op() == a2->op();
+         }
+         return false;
       }
       bool independent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          // s1 must not refer to s2
          // s2 must not refer to s1
-         GetEltPrimitive* a1 = dynamic_cast<GetEltPrimitive*>(s1.get());
-         GetEltPrimitive* a2 = dynamic_cast<GetEltPrimitive*>(s2.get());
-         return (a2->lhs() != a1->arr() && a2->lhs() != a1->index()
-               && a1->lhs() != a2->arr() && a1->lhs() != a2->index());
+         std::string lhs1 = getLHS(s1);
+         std::string lhs2 = getLHS(s2);
+         std::vector<std::string> rhs1 = getRHS(s1);
+         std::vector<std::string> rhs2 = getRHS(s2);
+         for (const auto & r : rhs1) {
+            if (lhs2 == r) {
+               return false;
+            }
+         }
+         for (const auto & r : rhs2) {
+            if (lhs1 == r) {
+               return false;
+            }
+         }
+         return true;
       }
       bool adjacent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          GetEltPrimitive* a1 = dynamic_cast<GetEltPrimitive*>(s1.get());
@@ -110,29 +151,74 @@ class VectorOptimizer : public IdentityOptimizer
          return P;
       }
       PackSet_t follow_use_defs(std::shared_ptr<BasicBlock> B, PackSet_t P, Pack_t p) {
-         // TODO
          std::shared_ptr<PrimitiveStatement> s1 = p[0];
          std::shared_ptr<PrimitiveStatement> s2 = p[1];
-         // Get x1 args
-         std::vector<std::string> x1;
-         // Get x2 args
-         std::vector<std::string> x2;
+         // Get s1 args
+         std::vector<std::string> x1 = getRHS(s1);
+         // Get s2 args
+         std::vector<std::string> x2 = getRHS(s2);
          unsigned long m = x1.size();
          std::vector<std::shared_ptr<PrimitiveStatement>> primitives = B->primitives();
          for (unsigned long j=0; j<m; j++) {
-            std::shared_ptr<PrimitiveStatement> t1;
-            std::shared_ptr<PrimitiveStatement> t2;
             bool ts_exist = false;
-            for (const auto & t1_cand : primitives) {
-               for (const auto & t2_cand : primitives) {
-                  if (t1_cand != t2_cand) {
-
+            for (const auto & t1 : primitives) {
+               for (const auto & t2 : primitives) {
+                  if (t1 != t2) {
+                     std::string t1_lhs = getLHS(t1);
+                     std::string t2_lhs = getLHS(t2);
+                     if (t1_lhs == x1[j] && t2_lhs == x2[j]) {
+                        if (stmts_can_pack(B, P, t1, t2)) {
+                           // Avoid inserting same pack twice
+                           if (P.find(Pack_t({ t2, t1 })) == P.end()) {
+                              P.insert(Pack_t({ t1, t2 }));
+                           }
+                           ts_exist = true;
+                           break;
+                        }
+                     }
+                  }
+               }
+               if (ts_exist) {
+                  break;
+               }
+            }
+         }
+         return P;
+      }
+      PackSet_t follow_def_uses(std::shared_ptr<BasicBlock> B, PackSet_t P, Pack_t p) {
+         std::shared_ptr<PrimitiveStatement> s1 = p[0];
+         std::shared_ptr<PrimitiveStatement> s2 = p[1];
+         // Get s1 lhs
+         std::string x1 = getLHS(s1);
+         // Get s2 lhs
+         std::string x2 = getLHS(s2);
+         int savings = -1;
+         std::shared_ptr<PrimitiveStatement> u1;
+         std::shared_ptr<PrimitiveStatement> u2;
+         std::vector<std::shared_ptr<PrimitiveStatement>> primitives = B->primitives();
+         for (const auto & t1 : primitives) {
+            std::vector<std::string> t1_rhs = getRHS(t1);
+            if (std::find(t1_rhs.begin(), t1_rhs.end(), x1) != t1_rhs.end()) {
+               for (const auto & t2 : primitives) {
+                  std::vector<std::string> t2_rhs = getRHS(t2);
+                  if (t1 != t2 && std::find(t2_rhs.begin(), t2_rhs.end(), x2) != t2_rhs.end()) {
+                     if (stmts_can_pack(B, P, t1, t2)) {
+                        // Assume we save
+                        savings = 1;
+                        u1 = t1;
+                        u2 = t2;
+                     }
                   }
                }
             }
          }
-      }
-      PackSet_t follow_def_uses(std::shared_ptr<BasicBlock> B, PackSet_t P, Pack_t p) {
+         if (savings >= 0) {
+            // Avoid inserting same pack twice
+            if (P.find(Pack_t({ u2, u1 })) == P.end()) {
+               P.insert(Pack_t({ u1, u2 }));
+            }
+         }
+         return P;
       }
       PackSet_t extend_packlist(std::shared_ptr<BasicBlock> B, PackSet_t P) {
          PackSet_t Pprev, Pnext;
