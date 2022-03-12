@@ -60,10 +60,8 @@ int main(int argc, char ** argv) {
          progCFG = vn_optimizer.optimize(progCFG);
       }
       if (vectorize) {
-         // TODO update progCFG
          progCFG = j_optimizer.optimize(progCFG);
-         vector_optimizer.optimize(progCFG);
-         return 1;
+         progCFG = vector_optimizer.optimize(progCFG);
       }
       std::cout << progCFG->toString() << std::endl;
       return 0;

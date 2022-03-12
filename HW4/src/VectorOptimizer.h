@@ -14,41 +14,12 @@ class VectorOptimizer : public IdentityOptimizer
 {
    private:
       std::set<std::string> _scheduled;
-      std::string getLHS(std::shared_ptr<PrimitiveStatement> s) {
-         GetEltPrimitive* ge = dynamic_cast<GetEltPrimitive*>(s.get());
-         if (ge != nullptr) {
-            return ge->lhs();
-         }
-         ArithmeticPrimitive *a = dynamic_cast<ArithmeticPrimitive*>(s.get());
-         if (a != nullptr) {
-            return a->lhs();
-         }
-         return "";
-      }
-      std::vector<std::string> getRHS(std::shared_ptr<PrimitiveStatement> s) {
-         GetEltPrimitive* ge = dynamic_cast<GetEltPrimitive*>(s.get());
-         if (ge != nullptr) {
-            return { ge->arr(), ge->index() };
-         }
-         ArithmeticPrimitive *a = dynamic_cast<ArithmeticPrimitive*>(s.get());
-         if (a != nullptr) {
-            return { a->op1(), a->op2() };
-         }
-         return {};
-      }
       std::shared_ptr<BasicBlock> SLP_extract(std::shared_ptr<BasicBlock> B) {
          PackSet_t P;
          P = find_adj_refs(B, P); 
          P = extend_packlist(B, P);
          P = combine_packs(P);
-         for (const auto & p : P) {
-            for (const auto & s : p) {
-               std::cout << s->toString() << std::endl;
-            }
-            std::cout << std::endl;
-         }
-         //return schedule(B, _new_block, P);
-         return _new_block;
+         return schedule(B, _new_block, P);
       }
       bool isomorphic(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          // Both must be GetElt or Arithmetic
@@ -67,10 +38,10 @@ class VectorOptimizer : public IdentityOptimizer
       bool independent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          // s1 must not refer to s2
          // s2 must not refer to s1
-         std::string lhs1 = getLHS(s1);
-         std::string lhs2 = getLHS(s2);
-         std::vector<std::string> rhs1 = getRHS(s1);
-         std::vector<std::string> rhs2 = getRHS(s2);
+         std::string lhs1 = s1->LHS();
+         std::string lhs2 = s2->LHS();
+         std::vector<std::string> rhs1 = s1->RHS();
+         std::vector<std::string> rhs2 = s2->RHS();
          for (const auto & r : rhs1) {
             if (lhs2 == r) {
                return false;
@@ -154,9 +125,9 @@ class VectorOptimizer : public IdentityOptimizer
          std::shared_ptr<PrimitiveStatement> s1 = p[0];
          std::shared_ptr<PrimitiveStatement> s2 = p[1];
          // Get s1 args
-         std::vector<std::string> x1 = getRHS(s1);
+         std::vector<std::string> x1 = s1->RHS();
          // Get s2 args
-         std::vector<std::string> x2 = getRHS(s2);
+         std::vector<std::string> x2 = s2->RHS();
          unsigned long m = x1.size();
          std::vector<std::shared_ptr<PrimitiveStatement>> primitives = B->primitives();
          for (unsigned long j=0; j<m; j++) {
@@ -164,8 +135,8 @@ class VectorOptimizer : public IdentityOptimizer
             for (const auto & t1 : primitives) {
                for (const auto & t2 : primitives) {
                   if (t1 != t2) {
-                     std::string t1_lhs = getLHS(t1);
-                     std::string t2_lhs = getLHS(t2);
+                     std::string t1_lhs = t1->LHS();
+                     std::string t2_lhs = t2->LHS();
                      if (t1_lhs == x1[j] && t2_lhs == x2[j]) {
                         if (stmts_can_pack(B, P, t1, t2)) {
                            // Avoid inserting same pack twice
@@ -189,18 +160,18 @@ class VectorOptimizer : public IdentityOptimizer
          std::shared_ptr<PrimitiveStatement> s1 = p[0];
          std::shared_ptr<PrimitiveStatement> s2 = p[1];
          // Get s1 lhs
-         std::string x1 = getLHS(s1);
+         std::string x1 = s1->LHS();
          // Get s2 lhs
-         std::string x2 = getLHS(s2);
+         std::string x2 = s2->LHS();
          int savings = -1;
          std::shared_ptr<PrimitiveStatement> u1;
          std::shared_ptr<PrimitiveStatement> u2;
          std::vector<std::shared_ptr<PrimitiveStatement>> primitives = B->primitives();
          for (const auto & t1 : primitives) {
-            std::vector<std::string> t1_rhs = getRHS(t1);
+            std::vector<std::string> t1_rhs = t1->RHS();
             if (std::find(t1_rhs.begin(), t1_rhs.end(), x1) != t1_rhs.end()) {
                for (const auto & t2 : primitives) {
-                  std::vector<std::string> t2_rhs = getRHS(t2);
+                  std::vector<std::string> t2_rhs = t2->RHS();
                   if (t1 != t2 && std::find(t2_rhs.begin(), t2_rhs.end(), x2) != t2_rhs.end()) {
                      if (stmts_can_pack(B, P, t1, t2)) {
                         // Assume we save
@@ -258,7 +229,31 @@ class VectorOptimizer : public IdentityOptimizer
          return P;
       }
       bool deps_scheduled(std::shared_ptr<PrimitiveStatement> s, std::shared_ptr<BasicBlock> B) {
-         // TODO type check find deps
+         // Check that all deps of s (RHS) are set in B
+         std::vector<std::string> deps = s->RHS();
+         for (const auto & dep : deps) {
+            if (isVariable(dep)) {
+               // Check if already scheduled
+               if (_scheduled.find(dep) != _scheduled.end()) {
+                  continue;
+               }
+               // Check that dep is a method parameter, if so it does not have a set line
+               std::vector<std::string> params = _new_method->first_block()->params();
+               bool is_scheduled = false;
+               for (const auto & p : params) {
+                  if (std::string("%") + p == dep) {
+                     _scheduled.insert(dep);
+                     is_scheduled = true;
+                     break;
+                  }
+               }
+               if (is_scheduled) {
+                  continue;
+               }
+               return false;
+            }
+         }
+         return true;
       }
       Pack_t first(std::shared_ptr<BasicBlock> B, PackSet_t P) {
          std::map<std::shared_ptr<PrimitiveStatement>, unsigned long> stmt_to_offset;
@@ -303,14 +298,20 @@ class VectorOptimizer : public IdentityOptimizer
                if (all_deps_scheduled) {
                   for (const auto & s2 : p) {
                      B2->appendPrimitive(s2);
+                     if (s2->LHS() != "") {
+                        _scheduled.insert(s2->LHS());
+                     }
                      B1->removePrimitive(s2);
-                     return schedule(B1, B2, P);
                   }
+                  return schedule(B1, B2, P);
                }
             } else if (deps_scheduled(s[i], B2)) {
-              B2->appendPrimitive(s[i]);
-              B1->removePrimitive(s[i]);
-              return schedule(B1, B2, P);
+               B2->appendPrimitive(s[i]);
+               if (s[i]->LHS() != "") {
+                  _scheduled.insert(s[i]->LHS());
+               }
+               B1->removePrimitive(s[i]);
+               return schedule(B1, B2, P);
             }
          }
          if (s.size() != 0) {
@@ -328,7 +329,7 @@ class VectorOptimizer : public IdentityOptimizer
          }
          _new_block = _label_to_block[label];
          // Don't copy primitives over just yet
-         // Call SLP extract
+         // Call SLP extract to modify _new_block
          SLP_extract(std::make_shared<BasicBlock>(node));
          // Optimize control
          node.control()->accept(*this);
@@ -337,6 +338,11 @@ class VectorOptimizer : public IdentityOptimizer
       void visit(BasicBlock& node) {
          optimizeBlock(node);
          optimizeChildren(node);
+      }
+
+      void visit(MethodCFG& node) {
+         _scheduled.clear();
+         IdentityOptimizer::visit(node);
       }
 };
 
