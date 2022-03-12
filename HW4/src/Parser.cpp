@@ -575,7 +575,7 @@ std::shared_ptr<ClassDeclaration> ProgramParser::parseClass(std::istream & input
             }
             std::stringstream buf2;
             // Parse field name
-            for (; std::isalpha(input.peek()); buf2 << static_cast<char>(input.get()));
+            for (; std::isalnum(input.peek()); buf2 << static_cast<char>(input.get()));
             std::string field = buf2.str();
             if (field.length() == 0) {
                throw ParserException("field has zero length");

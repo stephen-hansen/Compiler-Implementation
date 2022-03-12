@@ -2,6 +2,7 @@
 #include "ArithmeticOptimizer.h"
 #include "TypeChecker.h"
 #include "BetterSSAOptimizer.h"
+#include "JumpOptimizer.h"
 #include "SSAOptimizer.h"
 #include "ValueNumberOptimizer.h"
 #include "VectorOptimizer.h"
@@ -35,6 +36,7 @@ int main(int argc, char ** argv) {
    SSAOptimizer ssa_optimizer;
    ArithmeticOptimizer peephole_optimizer;
    ValueNumberOptimizer vn_optimizer;
+   JumpOptimizer j_optimizer;
    VectorOptimizer vector_optimizer;
    try {
       std::shared_ptr<ProgramDeclaration> progAST = parser.parse(std::cin);
@@ -59,6 +61,7 @@ int main(int argc, char ** argv) {
       }
       if (vectorize) {
          // TODO update progCFG
+         progCFG = j_optimizer.optimize(progCFG);
          vector_optimizer.optimize(progCFG);
          return 1;
       }

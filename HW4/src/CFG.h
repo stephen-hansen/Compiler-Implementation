@@ -470,6 +470,10 @@ class BasicBlock
       void addPredecessor(std::weak_ptr<BasicBlock> b) {
          _predecessors.push_back(b);
       }
+      void setChildren(std::vector<std::shared_ptr<BasicBlock>> c, std::vector<std::weak_ptr<BasicBlock>> wc) {
+         _children = c;
+         _weak_children = wc;
+      }
       // Push any children created with NEW inside the current scope
       void addNewChild(std::shared_ptr<BasicBlock> b) {
          _children.push_back(b);

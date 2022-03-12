@@ -16,33 +16,52 @@ class VectorOptimizer : public IdentityOptimizer
       std::set<std::string> _scheduled;
       std::shared_ptr<BasicBlock> SLP_extract(std::shared_ptr<BasicBlock> B) {
          PackSet_t P;
-         P = find_adj_refs(B, P);
+         P = find_adj_refs(B, P); 
+         //P = extend_packlist(B, P);
+         P = combine_packs(P);
          for (const auto & p : P) {
             for (const auto & s : p) {
                std::cout << s->toString() << std::endl;
             }
             std::cout << std::endl;
          }
-         //P = extend_packlist(B, P);
-         //P = combine_packs(P);
          //return schedule(B, _new_block, P);
          return _new_block;
       }
       bool isomorphic(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
-         // TODO return true if s1 and s2 are same statement type
-         // Both must be arithmetic statements with same OP
-         ArithmeticPrimitive* a1 = dynamic_cast<ArithmeticPrimitive*>(s1.get());
-         ArithmeticPrimitive* a2 = dynamic_cast<ArithmeticPrimitive*>(s2.get());
-         return (a1 != nullptr && a2 != nullptr && (a1->op() == a2->op()));
+         // Both must be GetElt statements
+         GetEltPrimitive* a1 = dynamic_cast<GetEltPrimitive*>(s1.get());
+         GetEltPrimitive* a2 = dynamic_cast<GetEltPrimitive*>(s2.get());
+         return (a1 != nullptr && a2 != nullptr);
       }
       bool independent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
-         // TODO return true if s1 and s2 do not depend on each other
          // s1 must not refer to s2
          // s2 must not refer to s1
-         ArithmeticPrimitive* a1 = dynamic_cast<ArithmeticPrimitive*>(s1.get());
-         ArithmeticPrimitive* a2 = dynamic_cast<ArithmeticPrimitive*>(s2.get());
-         return (a1->op1() != a2->lhs() && a1->op2() != a2->lhs()
-               && a2->op1() != a1->lhs() && a2->op2() != a1->lhs());
+         GetEltPrimitive* a1 = dynamic_cast<GetEltPrimitive*>(s1.get());
+         GetEltPrimitive* a2 = dynamic_cast<GetEltPrimitive*>(s2.get());
+         return (a2->lhs() != a1->arr() && a2->lhs() != a1->index()
+               && a1->lhs() != a2->arr() && a1->lhs() != a2->index());
+      }
+      bool adjacent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
+         GetEltPrimitive* a1 = dynamic_cast<GetEltPrimitive*>(s1.get());
+         GetEltPrimitive* a2 = dynamic_cast<GetEltPrimitive*>(s2.get());
+         if (a1 == nullptr || a2 == nullptr) {
+            return false;
+         }
+         // Array pointed to by both must be same
+         if (a1->arr() != a2->arr()) {
+            return false;
+         }
+         // Verify indices are off by one
+         std::string i1 = a1->index();
+         for (char const &ch : i1) {
+            if (std::isdigit(ch) == 0) return false;
+         }
+         std::string i2 = a2->index();
+         for (char const &ch : i2) {
+            if (std::isdigit(ch) == 0) return false;
+         }
+         return (std::stoi(i2) - std::stoi(i1) == 1);
       }
       bool stmts_can_pack(std::shared_ptr<BasicBlock> B, PackSet_t P, std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          if (isomorphic(s1, s2)) {
@@ -77,10 +96,12 @@ class VectorOptimizer : public IdentityOptimizer
          for (const auto & s1 : B->primitives()) {
             for (const auto & s2 : B->primitives()) {
                if (s1 != s2) {
-                  if (stmts_can_pack(B, P, s1, s2)) {
-                     // Avoid inserting same pack twice
-                     if (P.find(Pack_t({ s2, s1 })) == P.end()) {
-                        P.insert(Pack_t({ s1, s2 }));
+                  if (adjacent(s1, s2)) {
+                     if (stmts_can_pack(B, P, s1, s2)) {
+                        // Avoid inserting same pack twice
+                        if (P.find(Pack_t({ s2, s1 })) == P.end()) {
+                           P.insert(Pack_t({ s1, s2 }));
+                        }
                      }
                   }
                }
@@ -93,9 +114,22 @@ class VectorOptimizer : public IdentityOptimizer
          std::shared_ptr<PrimitiveStatement> s1 = p[0];
          std::shared_ptr<PrimitiveStatement> s2 = p[1];
          // Get x1 args
+         std::vector<std::string> x1;
          // Get x2 args
-         unsigned long m = 2;
+         std::vector<std::string> x2;
+         unsigned long m = x1.size();
+         std::vector<std::shared_ptr<PrimitiveStatement>> primitives = B->primitives();
          for (unsigned long j=0; j<m; j++) {
+            std::shared_ptr<PrimitiveStatement> t1;
+            std::shared_ptr<PrimitiveStatement> t2;
+            bool ts_exist = false;
+            for (const auto & t1_cand : primitives) {
+               for (const auto & t2_cand : primitives) {
+                  if (t1_cand != t2_cand) {
+
+                  }
+               }
+            }
          }
       }
       PackSet_t follow_def_uses(std::shared_ptr<BasicBlock> B, PackSet_t P, Pack_t p) {

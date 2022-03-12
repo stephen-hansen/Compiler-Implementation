@@ -1,20 +1,19 @@
 class FOO [
-   fields
-   method bar(a:int) returning int with locals b:int, c:int, d:int, e:int, f:int, g:int, h:int, j:int, k:int:
-      b = a
+   fields a0:int, a1:int, a2:int
+   method bar() returning int with locals b:int, c:int, d:int, e:int, f:int, g:int, h:int, j:int, k:int:
+      b = &this.a0
       c = 5
       d = (b + c)
-      e = a
+      e = &this.a1
       f = 6
       g = (e + f)
-      h = a
+      h = &this.a2
       j = 7
       k = (h + j)
       return 0
 ]
 
-main with i:int, f:FOO:
+main with f:FOO:
    f = @FOO
-   i = 5
-   _ = ^f.bar(i)
+   _ = ^f.bar()
    
