@@ -327,7 +327,7 @@ class VectorOptimizer : public IdentityOptimizer
             _label_to_block[label] = std::make_shared<BasicBlock>(label, node.params());
          }
          _new_block = _label_to_block[label];
-         // Optimize each primitive
+         // Don't copy primitives over just yet
          // Call SLP extract
          SLP_extract(std::make_shared<BasicBlock>(node));
          // Optimize control
