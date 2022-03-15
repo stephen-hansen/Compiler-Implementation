@@ -61,6 +61,10 @@ inline bool isVariable(std::string reg) {
    return reg[0] == '%' && allalpha;
 }
 
+inline bool isRegister(std::string reg) {
+   return reg[0] == '%';
+}
+
 inline bool isNumber(std::string reg) {
    bool alldigit = true;
    for (size_t i=0; i<reg.length(); i++) {

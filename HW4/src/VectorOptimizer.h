@@ -255,10 +255,14 @@ class VectorOptimizer : public IdentityOptimizer
          return P;
       }
       bool deps_scheduled(std::shared_ptr<PrimitiveStatement> s, std::shared_ptr<BasicBlock> B) {
+         if (dynamic_cast<PhiPrimitive*>(s.get()) != nullptr) {
+            // Phi primitives may cause cycles, but should always be at top of block - do not reschedule
+            return true;
+         }
          // Check that all deps of s (RHS) are set in B
          std::vector<std::string> deps = s->RHS();
          for (const auto & dep : deps) {
-            if (isVariable(dep)) {
+            if (isRegister(dep)) {
                // Check if already scheduled
                if (_scheduled.find(dep) != _scheduled.end()) {
                   continue;
@@ -267,7 +271,7 @@ class VectorOptimizer : public IdentityOptimizer
                std::vector<std::string> params = _new_method->first_block()->params();
                bool is_scheduled = false;
                for (const auto & p : params) {
-                  if (std::string("%") + p == dep) {
+                  if (p == dep) {
                      _scheduled.insert(dep);
                      is_scheduled = true;
                      break;
