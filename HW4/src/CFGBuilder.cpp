@@ -102,12 +102,10 @@ void CFGBuilder::visit(NewObjectExpression& node) {
    // Get size to allocate
    std::string allocSize = std::to_string(_class_name_to_alloc_size[classname]);
    // Allocate the class
-   _curr_block->appendPrimitive(std::make_shared<AllocPrimitive>(ret, allocSize));
-   // Store the vtbl
-   _curr_block->appendPrimitive(std::make_shared<StorePrimitive>(ret, toGlobal(toVtable(classname))));
+   _curr_block->appendPrimitive(std::make_shared<AllocPrimitive>(ret, allocSize)); 
    // Get slot -1
    std::string bitfield = createTemp(BITFIELD);
-   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(bitfield, ret, '-', std::to_string(1)));
+   _curr_block->appendPrimitive(std::make_shared<ArithmeticPrimitive>(bitfield, ret, '-', std::to_string(8)));
    // Compute bitfield
    std::map<std::string, std::shared_ptr<ClassCFG>> classes = _curr_program->classes();
    std::shared_ptr<ClassCFG> classdef = classes[classname];
@@ -124,6 +122,8 @@ void CFGBuilder::visit(NewObjectExpression& node) {
    }
    // Store the bitfield
    _curr_block->appendPrimitive(std::make_shared<StorePrimitive>(bitfield, std::to_string(bits)));
+   // Store the vtbl
+   _curr_block->appendPrimitive(std::make_shared<StorePrimitive>(ret, toGlobal(toVtable(classname))));
    // Set all fields to 0
    for (unsigned int i=0; i<_class_name_to_num_fields[classname]; i++) {
       _curr_block->appendPrimitive(std::make_shared<SetEltPrimitive>(ret, std::to_string(i+1), std::to_string(0)));
