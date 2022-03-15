@@ -25,24 +25,26 @@ class BetterSSAHelper : public CFGVisitor
             }
          }
       }
-      void updateGlobalsAndBlocks(std::string lhs, std::vector<std::string> rhs) {
+      void updateGlobalsAndBlocks(std::vector<std::string> lhs, std::vector<std::string> rhs) {
          updateGlobalsAndBlocks(rhs);
-         if (isVariable(lhs)) {
-            _varkill.insert(lhs);
-            if (_var_to_blocks.find(lhs) == _var_to_blocks.end()) {
-               _var_to_blocks[lhs] = std::set<std::string>({});
+         for (const auto& l : lhs) {
+            if (isVariable(l)) {
+               _varkill.insert(l);
+               if (_var_to_blocks.find(l) == _var_to_blocks.end()) {
+                  _var_to_blocks[l] = std::set<std::string>({});
+               }
+               _var_to_blocks[l].insert(_curr_label);
             }
-            _var_to_blocks[lhs].insert(_curr_label);
          }
       }
    public:
       // Do nothing on comment
       void visit(Comment& node) {}
       void visit(AssignmentPrimitive& node) {
-         updateGlobalsAndBlocks(node.lhs(), { node.rhs() });
+         updateGlobalsAndBlocks({ node.lhs() }, { node.rhs() });
       }
       void visit(ArithmeticPrimitive& node) {
-         updateGlobalsAndBlocks(node.lhs(), { node.op1(), node.op2() });
+         updateGlobalsAndBlocks({ node.lhs() }, { node.op1(), node.op2() });
       }
       void visit(CallPrimitive& node) {
          std::vector<std::string> rhs;
@@ -51,27 +53,45 @@ class BetterSSAHelper : public CFGVisitor
          rhs.reserve(temp.size() + args.size());
          rhs.insert(rhs.end(), temp.begin(), temp.end());
          rhs.insert(rhs.end(), args.begin(), args.end());
-         updateGlobalsAndBlocks(node.lhs(), rhs);
+         updateGlobalsAndBlocks({ node.lhs() }, rhs);
       }
       // Do nothing on phi (should not have any)
       void visit(PhiPrimitive& node) {}
       void visit(AllocPrimitive& node) {
-         updateGlobalsAndBlocks(node.lhs(), { node.size() });
+         updateGlobalsAndBlocks({ node.lhs() }, { node.size() });
       }
       void visit(PrintPrimitive& node) {
          updateGlobalsAndBlocks({ node.val() });
       }
       void visit(GetEltPrimitive& node) {
-         updateGlobalsAndBlocks(node.lhs(), { node.arr(), node.index() });
+         updateGlobalsAndBlocks({ node.lhs() }, { node.arr(), node.index() });
       }
       void visit(SetEltPrimitive& node) {
          updateGlobalsAndBlocks({ node.arr(), node.index(), node.val() });
       }
       void visit(LoadPrimitive& node) {
-         updateGlobalsAndBlocks(node.lhs(), { node.addr() });
+         updateGlobalsAndBlocks({ node.lhs() }, { node.addr() });
       }
       void visit(StorePrimitive& node) {
          updateGlobalsAndBlocks({ node.addr(), node.val() });
+      }
+      void visit(LoadVectorPrimitive& node) {
+         updateGlobalsAndBlocks({ node.lhs() }, node.vals());
+      }
+      void visit(StoreVectorPrimitive& node) {
+         updateGlobalsAndBlocks(node.vals(), { node.rhs() });
+      }
+      void visit(AddVectorPrimitive& node) {
+         updateGlobalsAndBlocks({ node.lhs() }, { node.op1(), node.op2() });
+      }
+      void visit(SubtractVectorPrimitive& node) {
+         updateGlobalsAndBlocks({ node.lhs() }, { node.op1(), node.op2() });
+      }
+      void visit(MultiplyVectorPrimitive& node) {
+         updateGlobalsAndBlocks({ node.lhs() }, { node.op1(), node.op2() });
+      }
+      void visit(DivideVectorPrimitive& node) {
+         updateGlobalsAndBlocks({ node.lhs() }, { node.op1(), node.op2() });
       }
       // No update needed for fail control
       void visit(FailControl& node) {}

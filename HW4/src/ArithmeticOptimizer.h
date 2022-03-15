@@ -120,6 +120,32 @@ class ArithmeticOptimizer : public IdentityOptimizer
          std::string val = adjustTemp(node.val());
          _new_block->appendPrimitive(std::make_shared<StorePrimitive>(addr, val));
       }
+      void visit(LoadVectorPrimitive& node) {
+         std::vector<std::string> args;
+         for (const auto & v : node.vals()) {
+            args.push_back(adjustTemp(v));
+         }
+         _new_block->appendPrimitive(std::make_shared<LoadVectorPrimitive>(adjustTemp(node.lhs()), args));
+      }
+      void visit(StoreVectorPrimitive& node) {
+         std::vector<std::string> vals;
+         for (const auto & v : node.vals()) {
+            vals.push_back(adjustTemp(v));
+         }
+         _new_block->appendPrimitive(std::make_shared<StoreVectorPrimitive>(vals, adjustTemp(node.rhs())));
+      }
+      void visit(AddVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<AddVectorPrimitive>(adjustTemp(node.lhs()), adjustTemp(node.op1()), adjustTemp(node.op2())));
+      }
+      void visit(SubtractVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<SubtractVectorPrimitive>(adjustTemp(node.lhs()), adjustTemp(node.op1()), adjustTemp(node.op2())));
+      }
+      void visit(MultiplyVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<MultiplyVectorPrimitive>(adjustTemp(node.lhs()), adjustTemp(node.op1()), adjustTemp(node.op2())));
+      }
+      void visit(DivideVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<DivideVectorPrimitive>(adjustTemp(node.lhs()), adjustTemp(node.op1()), adjustTemp(node.op2())));
+      }
       // FailControl doesn't need adjustment
       // JumpControl doesn't need adjustment
       void visit(IfElseControl& node) {

@@ -61,6 +61,24 @@ class IdentityOptimizer : public CFGVisitor
       void visit(StorePrimitive& node) {
          _new_block->appendPrimitive(std::make_shared<StorePrimitive>(node.addr(), node.val()));
       }
+      void visit(LoadVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<LoadVectorPrimitive>(node.lhs(), node.vals()));
+      }
+      void visit(StoreVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<StoreVectorPrimitive>(node.vals(), node.rhs()));
+      }
+      void visit(AddVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<AddVectorPrimitive>(node.lhs(), node.op1(), node.op2()));
+      }
+      void visit(SubtractVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<SubtractVectorPrimitive>(node.lhs(), node.op1(), node.op2()));
+      }
+      void visit(MultiplyVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<MultiplyVectorPrimitive>(node.lhs(), node.op1(), node.op2()));
+      }
+      void visit(DivideVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<DivideVectorPrimitive>(node.lhs(), node.op1(), node.op2()));
+      }
       void visit(FailControl& node) {
          _new_block->setControl(std::make_shared<FailControl>(node.message()));
       }

@@ -1,15 +1,20 @@
 class FOO [
    fields a0:int, a1:int, a2:int
    method bar(x:int, y:int, z:int) returning int with locals b:int, c:int, d:int, e:int, f:int, g:int, h:int, j:int, k:int:
-      b = &this.a0
-      c = x
-      d = (b + c)
-      e = &this.a1
-      f = y
-      g = (e + f)
-      h = &this.a2
-      j = z
-      k = (h + j)
+      d = (x + y)
+      g = (y + z)
+      k = (x + z)
+      while 1: {
+         b = &this.a0
+         c = x
+         d = (d + (b + c))
+         e = &this.a1
+         f = y
+         g = (g + (e + f))
+         h = &this.a2
+         j = z
+         k = (k + (h + j))
+      }
       return 0
 ]
 

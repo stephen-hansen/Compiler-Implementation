@@ -86,7 +86,7 @@ class IRStatement
 class PrimitiveStatement : public IRStatement
 {
    public:
-      virtual std::string LHS() = 0;
+      virtual std::vector<std::string> LHS() = 0;
       virtual std::vector<std::string> RHS() = 0;
 };
 
@@ -105,6 +105,12 @@ class GetEltPrimitive;
 class SetEltPrimitive;
 class LoadPrimitive;
 class StorePrimitive;
+class LoadVectorPrimitive;
+class StoreVectorPrimitive;
+class AddVectorPrimitive;
+class SubtractVectorPrimitive;
+class MultiplyVectorPrimitive;
+class DivideVectorPrimitive;
 class FailControl;
 class JumpControl;
 class IfElseControl;
@@ -129,6 +135,12 @@ class CFGVisitor
       virtual void visit(SetEltPrimitive& node) = 0;
       virtual void visit(LoadPrimitive& node) = 0;
       virtual void visit(StorePrimitive& node) = 0;
+      virtual void visit(LoadVectorPrimitive& node) = 0;
+      virtual void visit(StoreVectorPrimitive& node) = 0;
+      virtual void visit(AddVectorPrimitive& node) = 0;
+      virtual void visit(SubtractVectorPrimitive& node) = 0;
+      virtual void visit(MultiplyVectorPrimitive& node) = 0;
+      virtual void visit(DivideVectorPrimitive& node) = 0;
       virtual void visit(FailControl& node) = 0;
       virtual void visit(JumpControl& node) = 0;
       virtual void visit(IfElseControl& node) = 0;
@@ -152,8 +164,8 @@ class Comment : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return "";
+      virtual std::vector<std::string> LHS() override {
+         return {};
       }
       virtual std::vector<std::string> RHS() override {
          return {};
@@ -175,8 +187,8 @@ class AssignmentPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return _lhs;
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
       }
       virtual std::vector<std::string> RHS() override {
          return { _rhs };
@@ -202,8 +214,8 @@ class ArithmeticPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return _lhs;
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
       }
       virtual std::vector<std::string> RHS() override {
          return { _op1, _op2 };
@@ -239,8 +251,8 @@ class CallPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return _lhs;
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
       }
       virtual std::vector<std::string> RHS() override {
          std::vector<std::string> rhs = { _codeaddr, _receiver };
@@ -278,8 +290,8 @@ class PhiPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return _lhs;
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
       }
       virtual std::vector<std::string> RHS() override {
          std::vector<std::string> rhs;
@@ -306,8 +318,8 @@ class AllocPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return _lhs;
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
       }
       virtual std::vector<std::string> RHS() override {
          return { _size };
@@ -327,8 +339,8 @@ class PrintPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return "";
+      virtual std::vector<std::string> LHS() override {
+         return {};
       }
       virtual std::vector<std::string> RHS() override {
          return { _val };
@@ -352,8 +364,8 @@ class GetEltPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return _lhs;
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
       }
       virtual std::vector<std::string> RHS() override {
          return { _arr, _index };
@@ -380,8 +392,8 @@ class SetEltPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return "";
+      virtual std::vector<std::string> LHS() override {
+         return {};
       }
       virtual std::vector<std::string> RHS() override {
          return { _arr, _index, _val };
@@ -403,8 +415,8 @@ class LoadPrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return _lhs;
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
       }
       virtual std::vector<std::string> RHS() override {
          return { _addr };
@@ -426,11 +438,180 @@ class StorePrimitive : public PrimitiveStatement
       void accept(CFGVisitor& v) override {
          v.visit(*this);
       }
-      virtual std::string LHS() override {
-         return "";
+      virtual std::vector<std::string> LHS() override {
+         return {};
       }
       virtual std::vector<std::string> RHS() override {
          return { _addr, _val };
+      }
+};
+
+#define VECTOR "VEC"
+#define UNROLL_SIZE 4
+
+class LoadVectorPrimitive : public PrimitiveStatement
+{
+   private:
+      std::string _lhs;
+      std::vector<std::string> _vals;
+   public:
+      LoadVectorPrimitive(std::string lhs, std::vector<std::string> vals): _lhs(lhs), _vals(vals) {}
+      std::string lhs() { return _lhs; }
+      std::vector<std::string> vals() { return _vals; }
+      std::string toString() override {
+         std::string ret = _lhs + " = vecload(";
+         int i = 0;
+         for (const auto & v : _vals) {
+            if (i > 0) {
+               ret += ", ";
+            }
+            ret += v;
+            i++;
+         }
+         ret += ")";
+         return ret;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
+      }
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
+      }
+      virtual std::vector<std::string> RHS() override {
+         return _vals;
+      }
+};
+
+class StoreVectorPrimitive : public PrimitiveStatement
+{
+   private:
+      std::vector<std::string> _vals;
+      std::string _rhs;
+   public:
+      StoreVectorPrimitive(std::vector<std::string> vals, std::string rhs): _vals(vals), _rhs(rhs) {}
+      std::vector<std::string> vals() { return _vals; }
+      std::string rhs() { return _rhs; }
+      std::string toString() override {
+         int i = 0;
+         std::string ret;
+         for (const auto & v : _vals) {
+            if (i > 0) {
+               ret += ", ";
+            }
+            ret += v;
+            i++;
+         }
+         ret += " = vecstore(" + _rhs + ")";
+         return ret;
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
+      }
+      virtual std::vector<std::string> LHS() override {
+         return _vals;
+      }
+      virtual std::vector<std::string> RHS() override {
+         return { _rhs };
+      }
+};
+
+class AddVectorPrimitive : public PrimitiveStatement
+{
+   private:
+      std::string _lhs;
+      std::string _op1;
+      std::string _op2;
+   public:
+      AddVectorPrimitive(std::string lhs, std::string op1, std::string op2): _lhs(lhs), _op1(op1), _op2(op2) {}
+      std::string lhs() { return _lhs; }
+      std::string op1() { return _op1; }
+      std::string op2() { return _op2; }
+      std::string toString() override {
+         return _lhs + " = vecadd(" + _op1 + ", " + _op2 + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
+      }
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
+      }
+      virtual std::vector<std::string> RHS() override {
+         return { _op1, _op2 };
+      }
+};
+
+class SubtractVectorPrimitive : public PrimitiveStatement
+{
+   private:
+      std::string _lhs;
+      std::string _op1;
+      std::string _op2;
+   public:
+      SubtractVectorPrimitive(std::string lhs, std::string op1, std::string op2): _lhs(lhs), _op1(op1), _op2(op2) {}
+      std::string lhs() { return _lhs; }
+      std::string op1() { return _op1; }
+      std::string op2() { return _op2; }
+      std::string toString() override {
+         return _lhs + " = vecsub(" + _op1 + ", " + _op2 + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
+      }
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
+      }
+      virtual std::vector<std::string> RHS() override {
+         return { _op1, _op2 };
+      }
+};
+
+class MultiplyVectorPrimitive : public PrimitiveStatement
+{
+   private:
+      std::string _lhs;
+      std::string _op1;
+      std::string _op2;
+   public:
+      MultiplyVectorPrimitive(std::string lhs, std::string op1, std::string op2): _lhs(lhs), _op1(op1), _op2(op2) {}
+      std::string lhs() { return _lhs; }
+      std::string op1() { return _op1; }
+      std::string op2() { return _op2; }
+      std::string toString() override {
+         return _lhs + " = vecmul(" + _op1 + ", " + _op2 + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
+      }
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
+      }
+      virtual std::vector<std::string> RHS() override {
+         return { _op1, _op2 };
+      }
+};
+
+class DivideVectorPrimitive : public PrimitiveStatement
+{
+   private:
+      std::string _lhs;
+      std::string _op1;
+      std::string _op2;
+   public:
+      DivideVectorPrimitive(std::string lhs, std::string op1, std::string op2): _lhs(lhs), _op1(op1), _op2(op2) {}
+      std::string lhs() { return _lhs; }
+      std::string op1() { return _op1; }
+      std::string op2() { return _op2; }
+      std::string toString() override {
+         return _lhs + " = vecdiv(" + _op1 + ", " + _op2 + ")";
+      }
+      void accept(CFGVisitor& v) override {
+         v.visit(*this);
+      }
+      virtual std::vector<std::string> LHS() override {
+         return { _lhs };
+      }
+      virtual std::vector<std::string> RHS() override {
+         return { _op1, _op2 };
       }
 };
 

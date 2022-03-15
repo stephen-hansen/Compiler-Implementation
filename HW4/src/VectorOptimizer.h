@@ -38,18 +38,22 @@ class VectorOptimizer : public IdentityOptimizer
       bool independent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
          // s1 must not refer to s2
          // s2 must not refer to s1
-         std::string lhs1 = s1->LHS();
-         std::string lhs2 = s2->LHS();
+         std::vector<std::string> lhs1 = s1->LHS();
+         std::vector<std::string> lhs2 = s2->LHS();
          std::vector<std::string> rhs1 = s1->RHS();
          std::vector<std::string> rhs2 = s2->RHS();
          for (const auto & r : rhs1) {
-            if (lhs2 == r) {
-               return false;
+            for (const auto & l : lhs2) {
+               if (l == r) {
+                  return false;
+               }
             }
          }
          for (const auto & r : rhs2) {
-            if (lhs1 == r) {
-               return false;
+            for (const auto & l : lhs1) {
+               if (l == r) {
+                  return false;
+               }
             }
          }
          return true;
@@ -135,16 +139,18 @@ class VectorOptimizer : public IdentityOptimizer
             for (const auto & t1 : primitives) {
                for (const auto & t2 : primitives) {
                   if (t1 != t2) {
-                     std::string t1_lhs = t1->LHS();
-                     std::string t2_lhs = t2->LHS();
-                     if (t1_lhs == x1[j] && t2_lhs == x2[j]) {
-                        if (stmts_can_pack(B, P, t1, t2)) {
-                           // Avoid inserting same pack twice
-                           if (P.find(Pack_t({ t2, t1 })) == P.end()) {
-                              P.insert(Pack_t({ t1, t2 }));
+                     std::vector<std::string> t1_lhs = t1->LHS();
+                     std::vector<std::string> t2_lhs = t2->LHS();
+                     if (t1_lhs.size() == 1 && t2_lhs.size() == 1) {
+                        if (t1_lhs[0] == x1[j] && t2_lhs[0] == x2[j]) {
+                           if (stmts_can_pack(B, P, t1, t2)) {
+                              // Avoid inserting same pack twice
+                              if (P.find(Pack_t({ t2, t1 })) == P.end()) {
+                                 P.insert(Pack_t({ t1, t2 }));
+                              }
+                              ts_exist = true;
+                              break;
                            }
-                           ts_exist = true;
-                           break;
                         }
                      }
                   }
@@ -160,19 +166,22 @@ class VectorOptimizer : public IdentityOptimizer
          std::shared_ptr<PrimitiveStatement> s1 = p[0];
          std::shared_ptr<PrimitiveStatement> s2 = p[1];
          // Get s1 lhs
-         std::string x1 = s1->LHS();
+         std::vector<std::string> x1 = s1->LHS();
          // Get s2 lhs
-         std::string x2 = s2->LHS();
+         std::vector<std::string> x2 = s2->LHS();
+         if (x1.size() != 1 || x2.size() != 1) {
+            return P;
+         }
          int savings = -1;
          std::shared_ptr<PrimitiveStatement> u1;
          std::shared_ptr<PrimitiveStatement> u2;
          std::vector<std::shared_ptr<PrimitiveStatement>> primitives = B->primitives();
          for (const auto & t1 : primitives) {
             std::vector<std::string> t1_rhs = t1->RHS();
-            if (std::find(t1_rhs.begin(), t1_rhs.end(), x1) != t1_rhs.end()) {
+            if (std::find(t1_rhs.begin(), t1_rhs.end(), x1[0]) != t1_rhs.end()) {
                for (const auto & t2 : primitives) {
                   std::vector<std::string> t2_rhs = t2->RHS();
-                  if (t1 != t2 && std::find(t2_rhs.begin(), t2_rhs.end(), x2) != t2_rhs.end()) {
+                  if (t1 != t2 && std::find(t2_rhs.begin(), t2_rhs.end(), x2[0]) != t2_rhs.end()) {
                      if (stmts_can_pack(B, P, t1, t2)) {
                         // Assume we save
                         savings = 1;
@@ -298,8 +307,9 @@ class VectorOptimizer : public IdentityOptimizer
                if (all_deps_scheduled) {
                   for (const auto & s2 : p) {
                      B2->appendPrimitive(s2);
-                     if (s2->LHS() != "") {
-                        _scheduled.insert(s2->LHS());
+                     std::vector<std::string> s2_lhs = s2->LHS();
+                     for (const auto & lhs : s2_lhs) {
+                        _scheduled.insert(lhs);
                      }
                      B1->removePrimitive(s2);
                   }
@@ -307,8 +317,9 @@ class VectorOptimizer : public IdentityOptimizer
                }
             } else if (deps_scheduled(s[i], B2)) {
                B2->appendPrimitive(s[i]);
-               if (s[i]->LHS() != "") {
-                  _scheduled.insert(s[i]->LHS());
+               std::vector<std::string> si_lhs = s[i]->LHS();
+               for (const auto & lhs : si_lhs) {
+                  _scheduled.insert(lhs);
                }
                B1->removePrimitive(s[i]);
                return schedule(B1, B2, P);

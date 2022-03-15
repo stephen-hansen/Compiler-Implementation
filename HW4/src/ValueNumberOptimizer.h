@@ -246,6 +246,48 @@ class ValueNumberOptimizer : public IdentityOptimizer
       void visit(StorePrimitive& node) {
          _new_block->appendPrimitive(std::make_shared<StorePrimitive>(getVN(node.addr()), getVN(node.val())));
       }
+      void visit(LoadVectorPrimitive& node) {
+         // Similar to assignment
+         // All loads by the compiler are of constants, can cache
+         // Check if expr is in hash table
+         std::vector<std::string> args;
+         for (const auto & v : node.vals()) {
+            args.push_back(getVN(v));
+         }
+         std::pair<char, std::vector<std::string>> hash = std::make_pair('V', args);
+         if (_hashtable.find(hash) != _hashtable.end()) {
+            // In hash table
+            // Map node's LHS to hash associated VN
+            _vn[node.lhs()] = _hashtable[hash];
+            // By default do NOT add primitive
+         } else {
+            // Not in hash table
+            // Add it (use LHS since RHS is not a valid operand, i.e. const or reg)
+            _vn[node.lhs()] = node.lhs();
+            _hashtable[hash] = node.lhs();
+            // Need to keep primitive
+            _new_block->appendPrimitive(std::make_shared<LoadVectorPrimitive>(node.lhs(), args));
+         } 
+      }
+      void visit(StoreVectorPrimitive& node) {
+         std::vector<std::string> vals;
+         for (const auto & v : node.vals()) {
+            vals.push_back(getVN(v));
+         }
+         _new_block->appendPrimitive(std::make_shared<StoreVectorPrimitive>(vals, getVN(node.rhs())));
+      }
+      void visit(AddVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<AddVectorPrimitive>(getVN(node.lhs()), getVN(node.op1()), getVN(node.op2())));
+      }
+      void visit(SubtractVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<SubtractVectorPrimitive>(getVN(node.lhs()), getVN(node.op1()), getVN(node.op2())));
+      }
+      void visit(MultiplyVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<MultiplyVectorPrimitive>(getVN(node.lhs()), getVN(node.op1()), getVN(node.op2())));
+      }
+      void visit(DivideVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<DivideVectorPrimitive>(getVN(node.lhs()), getVN(node.op1()), getVN(node.op2())));
+      }
       void visit(FailControl& node) {
          _new_block->setControl(std::make_shared<FailControl>(node.message()));
       }
@@ -484,6 +526,11 @@ class ValueNumberOptimizer : public IdentityOptimizer
          }
       }
       void visit(ProgramCFG& node) {
+         _hashtable.clear();
+         _vn.clear();
+         _domtree.clear();
+         _prunelabels.clear();
+         _ownedlabels.clear();
          std::shared_ptr<MethodCFG> main = node.main_method();
          // Optimize main
          main->accept(*this);

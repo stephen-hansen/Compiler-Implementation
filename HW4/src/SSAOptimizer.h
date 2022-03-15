@@ -122,6 +122,33 @@ class SSAOptimizer : public IdentityOptimizer
          std::string val = adjustRHSVariable(node.val());
          _new_block->appendPrimitive(std::make_shared<StorePrimitive>(addr, val));
       }
+      void visit(LoadVectorPrimitive& node) {
+         std::vector<std::string> args;
+         for (const auto & v : node.vals()) {
+            args.push_back(adjustRHSVariable(v));
+         }
+         _new_block->appendPrimitive(std::make_shared<LoadVectorPrimitive>(adjustLHSVariable(node.lhs()), args));
+      }
+      void visit(StoreVectorPrimitive& node) {
+         std::vector<std::string> vals;
+         for (const auto & v : node.vals()) {
+            vals.push_back(adjustLHSVariable(v));
+         }
+         _new_block->appendPrimitive(std::make_shared<StoreVectorPrimitive>(vals, adjustRHSVariable(node.rhs())));
+      }
+      void visit(AddVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<AddVectorPrimitive>(adjustLHSVariable(node.lhs()), adjustRHSVariable(node.op1()), adjustRHSVariable(node.op2())));
+      }
+      void visit(SubtractVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<SubtractVectorPrimitive>(adjustLHSVariable(node.lhs()), adjustRHSVariable(node.op1()), adjustRHSVariable(node.op2())));
+      }
+      void visit(MultiplyVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<MultiplyVectorPrimitive>(adjustLHSVariable(node.lhs()), adjustRHSVariable(node.op1()), adjustRHSVariable(node.op2())));
+      }
+      void visit(DivideVectorPrimitive& node) {
+         _new_block->appendPrimitive(std::make_shared<DivideVectorPrimitive>(adjustLHSVariable(node.lhs()), adjustRHSVariable(node.op1()), adjustRHSVariable(node.op2())));
+      }
+
       // FailControl doesn't need adjustment
       // JumpControl doesn't need adjustment
       void visit(IfElseControl& node) {
