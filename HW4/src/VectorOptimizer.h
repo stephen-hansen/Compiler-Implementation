@@ -28,6 +28,11 @@ class VectorOptimizer : public IdentityOptimizer
          if (ge1 != nullptr && ge2 != nullptr) {
             return true;
          }
+         SetEltPrimitive* se1 = dynamic_cast<SetEltPrimitive*>(s1.get());
+         SetEltPrimitive* se2 = dynamic_cast<SetEltPrimitive*>(s2.get());
+         if (se1 != nullptr && se2 != nullptr) {
+            return true;
+         }
          ArithmeticPrimitive *a1 = dynamic_cast<ArithmeticPrimitive*>(s1.get());
          ArithmeticPrimitive *a2 = dynamic_cast<ArithmeticPrimitive*>(s2.get());
          if (a1 != nullptr && a2 != nullptr) {
@@ -59,21 +64,32 @@ class VectorOptimizer : public IdentityOptimizer
          return true;
       }
       bool adjacent(std::shared_ptr<PrimitiveStatement> s1, std::shared_ptr<PrimitiveStatement> s2) {
+         std::string i1, i2, arr1, arr2;
          GetEltPrimitive* a1 = dynamic_cast<GetEltPrimitive*>(s1.get());
          GetEltPrimitive* a2 = dynamic_cast<GetEltPrimitive*>(s2.get());
-         if (a1 == nullptr || a2 == nullptr) {
+         SetEltPrimitive* b1 = dynamic_cast<SetEltPrimitive*>(s1.get());
+         SetEltPrimitive* b2 = dynamic_cast<SetEltPrimitive*>(s2.get());
+         if (a1 != nullptr && a2 != nullptr) {
+            i1 = a1->index();
+            i2 = a2->index();
+            arr1 = a1->arr();
+            arr2 = a2->arr();
+         } else if (b1 != nullptr && b2 != nullptr) {
+            i1 = b1->index();
+            i2 = b2->index();
+            arr1 = b1->arr();
+            arr2 = b2->arr();
+         } else {
             return false;
          }
          // Array pointed to by both must be same
-         if (a1->arr() != a2->arr()) {
+         if (arr1 != arr2) {
             return false;
          }
          // Verify indices are off by one
-         std::string i1 = a1->index();
          for (char const &ch : i1) {
             if (std::isdigit(ch) == 0) return false;
          }
-         std::string i2 = a2->index();
          for (char const &ch : i2) {
             if (std::isdigit(ch) == 0) return false;
          }
@@ -230,6 +246,7 @@ class VectorOptimizer : public IdentityOptimizer
                      Pnext.erase(p1);
                      Pnext.erase(p2);
                      Pnext.insert(newPack);
+                     return combine_packs(Pnext);
                   }
                }
             }

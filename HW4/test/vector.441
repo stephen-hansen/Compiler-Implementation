@@ -1,24 +1,15 @@
-class FOO [
-   fields a0:int, a1:int, a2:int
-   method bar(x:int, y:int, z:int) returning int with locals b:int, c:int, d:int, e:int, f:int, g:int, h:int, j:int, k:int:
-      d = (x + y)
-      g = (y + z)
-      k = (x + z)
-      while 1: {
-         b = &this.a0
-         c = x
-         d = (d + (b + c))
-         e = &this.a1
-         f = y
-         g = (g + (e + f))
-         h = &this.a2
-         j = z
-         k = (k + (h + j))
-      }
+class VECTOR [
+   fields a0:int, a1:int, a2:int, a3:int
+   method add(other:VECTOR) returning int with locals i:int:
+      !this.a0 = (&this.a0 + &other.a0)
+      !this.a1 = (&this.a1 + &other.a1)
+      !this.a2 = (&this.a2 + &other.a2)
+      !this.a3 = (&this.a3 + &other.a3)
       return 0
 ]
 
-main with f:FOO:
-   f = @FOO
-   _ = ^f.bar(5, 6, 7)
+main with v:VECTOR, u:VECTOR:
+   v = @VECTOR
+   u = @VECTOR
+   _ = ^v.add(u)
    
