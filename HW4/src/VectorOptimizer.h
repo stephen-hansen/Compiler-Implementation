@@ -377,7 +377,7 @@ class VectorOptimizer : public IdentityOptimizer
                      if (lhs_args.size() > 0) {
                         while (lhs_args.size() < UNROLL_SIZE) {
                            // Pad with zero at end
-                           lhs_args.push_back("%0"); // TODO change
+                           lhs_args.push_back("%UNUSED");
                            v1_args.push_back(std::to_string(0));
                            v2_args.push_back(std::to_string(0));
                         }

@@ -1,7 +1,9 @@
-# CS 441 Milestone 3 README
+# CS 441 Milestone 4 README
 
-Hi, welcome to the README for CS 441 Milestone 3.
-Details regarding the usage and type checking are below.
+Hi, welcome to the README for CS 441 Milestone 4 (+ honors project).
+Details regarding the usage and functionality are below.
+
+For Milestone 4, I implemented the GC Option.
 
 ## Requirements
 
@@ -22,12 +24,6 @@ where `p.441` is the input file (source language code) and
 `p.ir` is the compiler output (IR code). By default the output
 will be in SSA form and the IR will be optimized by a
 peephole optimization.
-
-Please let me know if the compiler fails to compile any program
-with valid syntax. Also let me know if you run into any
-segfaults, I spent a couple of hours this week ironing out any
-bugs caused by value numbering and I believe it should work
-correctly for all inputs, but let me know otherwise.
 
 Some flags are provided for testing.
 
@@ -55,85 +51,270 @@ Some flags are provided for testing.
   performed after SSA transformation. With this flag enabled,
   IR output should have more ALU operations, more memory
   reads, and more conditional branch tag checks.
+- `-vectorize` enable a vectorization optimization.
+  Vectorization is disabled by default. On enabling this,
+  code will be optimized to remove redundant jump statements
+  first so that basic block vectorization is easier. The
+  optimization then applies the SLP extraction algorithm
+  and then a second pass through value numbering.
 
-## Type Checker
+## GC
 
 ### Where is Optimization Code
 
-The better SSA optimizer is provided in `src/TypeChecker.h`.
-This iterates over the AST output before passing the program to the CFG.
-It ensures that the program is statically typed correctly. If there is an
-issue, it will throw an exception which will be printed and the program
-will exit (there will be no IR output).
+Changes were made to `src/CFGBuilder.cpp` so that class
+allocation (for non-null allocs) populates slot -1
+with a bitfield indicating which "real" slots hold
+pointers. After allocating space, we subtract 8 to
+get slot -1 and then calculate the bitfield. The bitfield
+is determined from the type info stored in the backend;
+any non-int field that is a class that we can look up
+is determined to be a pointer and has the corresponding
+bit set to 1. This information is relatively simple to
+compute; the CFG has both type info and mapping of field
+names to slot offsets, so we just compute this directly
+(using a sequence of binary ORs) and store it.
 
-The exceptions try to be somewhat meaningful and detail the expression or
-function name causing an issue but they are not "great" error messages, as
-an FYI.
+See method `void CFGBuilder::visit(NewObjectExpression& node)`
+(line 97) in `src/CFGBuilder.cpp` for the changes.
 
-## Refactoring
+No other changes were required to support garbage
+collection.
 
-With the new static typing there were some major overhauls made to parts
-of the compiler, such as
+### GC Test Program
 
-- CFGs are structured slightly better in terms of maps and some steps
-  were moved around to make more sense (e.g. class definitions are
-  parsed first before class methods to ensure all type information
-  is correct).
-- Optimizers now track typing of each register. In the case of the SSA
-  optimizers they also track the type of new SSA registers. The tracking
-  of typing is relatively unimpactful save for field lookups which now
-  require the type info so that the field map can just be inlined.
-- Tagging is removed, all integers are preserved as literal values and
-  there are no more tag checks. Some identities like x / 1 and x * 1
-  now work properly with value numbering.
-- Field access is direct. We store a map of field name to offset for
-  each object internally when building the CFG and use that to directly
-  compute getelt/setelt offsets. This also means without the field map
-  classes are now 1 byte smaller to allocate.
-- Method lookups are now no longer checked to see if they succeed but
-  the vtable is still in place.
-- Non-null checks now occur before every getelt/setelt/call. The only
-  time a non-null check does not occur is if it is being called on
-  %this (%this0 in SSA form) as we assume that it exists.
-- Value numbering has been adjusted, now instead of potentially removing
-  tag checks it has the potential to remove unnecessary non-null checks
-  on SSA output.
+A program is included that tests the garbage collection.
+This program is located in `test/gc.441`. This program
+creates a stack and runs a loop 50 times. In the loop,
+a number is added to the stack (creating a new node
+object), then immediately popped off the stack (removing
+the node) and the number is printed. Without garbage
+collection, the removed nodes are still in memory wasting
+space. With garbage collection, the removed nodes are
+cleaned every time the GC runs and the program runs
+to completion.
 
-## Test Programs
+If you run with `exec-fixedmem` the program will
+crash with an OutOfMemory error.
+`./comp < ./test/gc.441 | ir441 exec-fixedmem`
 
-Two large test programs are provided in `test/untyped.441` and `test/typed.441`
-which are untyped and typed as the names suggest. The untyped program will
-only compile on the milestone 2 compiler and likewise the typed program
-will only compile on the milestone 3 compiler. These programs test a stack,
-queue, and Fibonacci function. Other programs are provided in the `test`
-directory for additional testing but the two listed are the ones that
-are required.
+If you run with `exec-gc` the program will run
+to completion and print numbers 50-1 because the
+GC works.
+`./comp < ./test/gc.441 | ir441 exec-gc`
 
-Here are the performance results (GVN, SSA, all optimizations enabled):
+Note the latest `ir441` interpreter (`v2.1.2`) is
+necessary to run the program, I had to make
+the changes to the interpreter as my test program
+would not run otherwise.
 
-- `test/untyped.441 ExecStats`
-   - `fast_alu_ops: 186974`
-   - `slow_alu_ops: 81230`
-   - `conditional_branches: 135115`
-   - `unconditional_branches: 54599`
-   - `calls: 24980`
-   - `rets: 24981`
-   - `mem_reads: 54995`
-   - `mem_writes: 4251`
-   - `allocs: 432`
-   - `prints: 41`
-   - `phis: 21`
-- `test/typed.441 ExecStats`
-   - `fast_alu_ops: 73554`
-   - `slow_alu_ops: 33472`
-   - `conditional_branches: 43981`
-   - `unconditional_branches: 29199`
-   - `calls: 24980`
-   - `rets: 24981`
-   - `mem_reads: 44080`
-   - `mem_writes: 3819`
-   - `allocs: 432`
-   - `prints: 41`
-   - `phis: 21`
+## Vectorization (Honors Project)
 
+### How it Works
+
+My honors project is an implementation of the
+SLP extraction algorithm described in
+"Exploiting Superword Level Parallelism with
+Multimedia Instruction Sets" by Larsen and
+Amarasinghe. The technique works by first
+finding candidate sets of instructions to
+pack together. Here the authors denote a
+candidate pack as two instructions that
+operate on directly adjacent data in memory,
+are independent, and isomorphic (same instruction).
+To identify candidate packs, I find adjacent
+getelt or setelt instructions operating on
+the same object that are 1 slot apart. To
+simulate an array type, it is easy enough
+to create a class representing an array or
+vector by giving it enough fields. As the
+fields are directly adjacent by slots, we
+may treat the object like an array and may
+vectorize it.
+
+From there we then find uses of these slots
+and group the uses together. This is where
+we find arithmetic operations that can
+be grouped together. We then trace back
+operands inside these operations and work
+backwards to find their definitions so that
+the other operands can also be vectorized.
+Once all packs are found, we then merge
+packs together if they share a common
+memory boundary (up until this point,
+packs were each two instructions, but
+we may now group together by shared
+instructions).
+
+Finally, the instructions are rescheduled
+inside the new basic block. The scheduling
+performs basic code motion to move the
+instructions around to an optimal location
+for vectorization. We schedule instructions
+based on whether their dependencies are
+already scheduled, resulting in a new
+code order that is ideal for vectorization
+but still preserves dependency ordering.
+
+### Where is Optimization Code
+
+The vectorization optimization is applied by
+`src/VectorOptimizer.h`. This implements
+the SLP extraction algorithm. Note that originally
+the intent was to implement a portion of this
+algorithm however I found it necessary to basically
+implement the entire algorithm as a prototype in
+order for it to work correctly. Some aspects like
+finding optimal savings are not there but the core
+algorithm is intact.
+
+Also note that prior to writing this most
+optimized code had a lot of redundant jump statements
+created by value numbering. These statements got
+in the way when vectorizing as the algorithm only
+works on a basic block level. I implemented a jump
+optimizer in `src/JumpOptimizer.h` which is supposed
+to remove redundant jumps and merge blocks upward
+so that vectorization is easier to perform. This
+optimization is DISABLED and only enabled when
+compiling with `-vectorize`.
+
+### Limitations
+
+There are a number of known limitations with this
+technique and as a warning the vectorization will
+NOT produce valid code for all inputs. However, of
+the inputs that it does support, it produces
+valid vectorization code and demonstrates that
+the algorithm works correctly. Thus I feel the work
+done here is sufficient for the honors project.
+
+First, the jump optimization is largely untested
+on complex inputs and similarly dependency tracing
+is barebones. I believe jump optimization is correct
+but it is disabled by default as I would rather not
+have this optional component break code for the GC
+requirement. Dependency tracing is based on SSA -
+if the RHS variables have been defined in the past,
+then the dependency requirement is satisfied and
+the instruction can be scheduled. For a single block
+this works however across multiple blocks it
+gets complicated. Phi statements are meant to resolve
+conditional dependencies so when doing dependency
+tracing, phi statements are automatically scheduled
+(we assume dependencies are already resolved by
+the predecessor blocks). Code with conditional
+statements and loops should still compile but I make
+no guarantee that this works everywhere.
+
+The main limitation right now is that code with field
+dependencies on read/write can be scheduled incorrectly.
+While cyclic dependencies can happen, usually the
+algorithm schedules them correctly as we schedule the
+earliest statement first. However combining field
+reads and writes to the same object can be problematic.
+Observe if we have something like
+
+a = read(data[0])
+write(data[1], x)
+b = read(data[1])
+
+We could vectorize this as
+
+write(data[1], x)
+a = read(data[0])
+b = read(data[1])
+
+where the two subsequent reads are done in parallel after
+the write. However, getelt/setelt calls do not use SSA
+convention to mark each update (we just update the field
+directly) so the dependencies fail to get traced by
+the optimizer and we end up with something like
+
+a = read(data[0])
+b = read(data[1])
+write(data[1], x)
+
+which is wrong. So, I would recommend NOT mixing reads/writes
+to the same object in a method. Rather, you can get around
+this issue by just using variables which are handled by SSA
+and thus can easily find dependencies. For example:
+
+a = read(data[0])
+temp = x
+write(data[1], temp)
+b = temp
+
+We eliminate the second read and replace it with the value
+of the read fixing the vectorized code but removing the
+vectorization optimization in its place. Unfortunately
+the paper does not detail examples involving writes to
+adjacent memory and so it is hard to address this issue
+without writing some code analysis to find these dependencies.
+
+It is perfectly fine however to read from one array and
+write to another as long as you do not read/write from
+the same array in a method. So something like
+
+x[0] = y[0] + z[0]
+x[1] = y[1] + z[1]
+
+is totally fine.
+
+### IR Changes
+
+There are six new IR commands. Here is an overview of each.
+
+- `%VEC = vecload(%a, %b, %c, %d)` loads the registers/scalars into a vector.
+- `%a, %b, %c, %d = vecstore(%VEC)` unloads the vector into the destination registers.
+- `%VEC3 = vecadd(%VEC1, %VEC2)` perform parallel addition on vectors
+- `%VEC3 = vecsub(%VEC1, %VEC2)` perform parallel subtraction on vectors
+- `%VEC3 = vecmult(%VEC1, %VEC2)` perform parallel multiplication (lower 64 bits) on vectors
+- `%VEC3 = vecdiv(%VEC1, %VEC2)` perform parallel division (integer division) on vectors
+
+When scheduling the packed statements the arithmetic statements are unrolled by size 4
+so we use vectors storing 4 64-bit integers. Note that each arithmetic statement essentially
+translates to two loads, an operation, and a store, e.g.:
+
+%VEC1 = vecload(...)
+%VEC2 = vecload(...)
+%VEC3 = vecadd(%VEC1, %VEC2)
+... = vecstore(%VEC3)
+
+Note this is rather redundant if you repeatedly perform operations on the same vector.
+This translation was done purely to preserve code functionality so that any later operations
+depending on intermediate variable results still work. With some future changes to
+value numbering perhaps redundant loads and stores could be removed. The algorithm provided
+in the paper detailed how to reschedule the operations to support vectorization. It did
+not however directly translate the operations to vector instructions. After rescheduling
+operations, each packed set of operations was given a macro to schedule the operations
+with the AltiVec instruction set. Here I just extended the scheduling of packed instructions
+to replace the instructions with a direct vector translation that still preserves functionality,
+but in the long run the excessive loads and stores might actually result in worse performance.
+
+(This is really meant as a prototype and the point is, the implementation of the
+algorithm works - regardless of whether it is more performant or not).
+
+### Vectorization Test Program
+
+An extensive test program has been supplied in `test/vector.441`. This program defines
+a 4x1 vector type and a 4x4 matrix type. Matrix-vector multiplication is implemented.
+If you compile by default, you will see a lot of getelt statements followed by individual
+multiplications and additions in various orders. In total there are 16 multiplications
+and 12 additions. The compiler by default will perform these operations in the order listed,
+so we will compute the first vector component, then the second, then the third, and finally
+the fourth.
+
+When running the compiler with `-vectorize` you will see that the code is greatly cleaned
+up and much more straightforward. All getelt statements are moved to the top of the method
+and all setelts are moved to the bottom. In between we have the matrix-vector multiplication
+fully vectorized. There are four calls to `vecmul` for the 16 multiplications; one call
+per row of the matrix. Afterwards there are then three calls to `vecadd` for the 12
+additions. The first `vecadd` call computes the leftmost and rightmost sums for
+the first two rows of the vector. The second `vecadd` call computes the leftmost
+and rightmost sums for the last two rows of the vector. The final `vecadd` call merges
+the leftmost and rightmost sums together (the middle sum) for all rows resulting
+in the final vector result. The operations are scheduled correctly for dependencies
+and thus demonstrates that the vectorization optimization works for simple basic
+block examples.
 
