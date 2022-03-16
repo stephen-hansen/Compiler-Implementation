@@ -58,10 +58,12 @@ int main(int argc, char ** argv) {
       }
       if (!noVN) {
          progCFG = vn_optimizer.optimize(progCFG);
+         progCFG = j_optimizer.optimize(progCFG);
       }
       if (vectorize) {
-         progCFG = j_optimizer.optimize(progCFG);
          progCFG = vector_optimizer.optimize(progCFG);
+         // Second pass thru vn
+         progCFG = vn_optimizer.optimize(progCFG);
       }
       std::cout << progCFG->toString() << std::endl;
       return 0;

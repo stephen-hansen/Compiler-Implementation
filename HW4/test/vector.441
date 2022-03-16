@@ -1,15 +1,48 @@
 class VECTOR [
-   fields a0:int, a1:int, a2:int, a3:int
-   method add(other:VECTOR) returning int with locals i:int:
-      !this.a0 = (&this.a0 + &other.a0)
-      !this.a1 = (&this.a1 + &other.a1)
-      !this.a2 = (&this.a2 + &other.a2)
-      !this.a3 = (&this.a3 + &other.a3)
-      return 0
+   fields a0:int, b0:int, c0:int, d0:int
+
+   method print() returning int with locals:
+      print(&this.a0)
+      print(&this.b0)
+      print(&this.c0)
+      print(&this.d0)
 ]
 
-main with v:VECTOR, u:VECTOR:
+class MATRIX [
+   fields a0:int, a1:int, a2:int, a3:int, b0:int, b1:int, b2:int, b3:int, c0:int, c1:int, c2:int, c3:int, d0:int, d1:int, d2:int, d3:int
+
+   method vectormult(b:VECTOR) returning VECTOR with locals v:VECTOR:
+      v = @VECTOR
+      !v.a0 = (((&this.a0 * &b.a0) + (&this.a1 * &b.b0)) + ((&this.a2 * &b.c0) + (&this.a3 * &b.d0)))
+      !v.b0 = (((&this.b0 * &b.a0) + (&this.b1 * &b.b0)) + ((&this.b2 * &b.c0) + (&this.b3 * &b.d0)))
+      !v.c0 = (((&this.c0 * &b.a0) + (&this.c1 * &b.b0)) + ((&this.c2 * &b.c0) + (&this.c3 * &b.d0)))
+      !v.d0 = (((&this.d0 * &b.a0) + (&this.d1 * &b.b0)) + ((&this.d2 * &b.c0) + (&this.d3 * &b.d0)))
+      return v
+]
+
+main with v:VECTOR, u:MATRIX:
    v = @VECTOR
-   u = @VECTOR
-   _ = ^v.add(u)
+   !v.a0 = 1
+   !v.b0 = 2
+   !v.c0 = 3
+   !v.d0 = 4
+   u = @MATRIX
+   !u.a0 = 1
+   !u.a1 = 1
+   !u.a2 = 1
+   !u.a3 = 1
+   !u.b0 = 1
+   !u.b1 = 2
+   !u.b2 = 4
+   !u.b3 = 3
+   !u.c0 = 1
+   !u.c1 = 4
+   !u.c2 = 1
+   !u.c3 = 4
+   !u.d0 = 1
+   !u.d1 = 3
+   !u.d2 = 4
+   !u.d3 = 2
+   v = ^u.vectormult(v)
+   _ = ^v.print()
    

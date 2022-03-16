@@ -14,6 +14,7 @@ class VectorOptimizer : public IdentityOptimizer
 {
    private:
       std::set<std::string> _scheduled;
+      size_t _vector_counter;
       std::shared_ptr<BasicBlock> SLP_extract(std::shared_ptr<BasicBlock> B) {
          PackSet_t P;
          P = find_adj_refs(B, P); 
@@ -305,6 +306,23 @@ class VectorOptimizer : public IdentityOptimizer
          }
          return earliest_pack;
       }
+      void schedule_vector(std::vector<std::string> v1_args, std::vector<std::string> v2_args, std::vector<std::string> lhs_args, char op, std::shared_ptr<BasicBlock> B2) {
+         std::string VEC1 = std::string("%") + std::string(VECTOR) + std::to_string(_vector_counter++);
+         B2->appendPrimitive(std::make_shared<LoadVectorPrimitive>(VEC1, v1_args));
+         std::string VEC2 = std::string("%") + std::string(VECTOR) + std::to_string(_vector_counter++);
+         B2->appendPrimitive(std::make_shared<LoadVectorPrimitive>(VEC2, v2_args));
+         std::string DEST_VEC = std::string("%") + std::string(VECTOR) + std::to_string(_vector_counter++);
+         if (op == '+') {
+            B2->appendPrimitive(std::make_shared<AddVectorPrimitive>(DEST_VEC, VEC1, VEC2));
+         } else if (op == '-') {
+            B2->appendPrimitive(std::make_shared<SubtractVectorPrimitive>(DEST_VEC, VEC1, VEC2));
+         } else if (op == '*') {
+            B2->appendPrimitive(std::make_shared<MultiplyVectorPrimitive>(DEST_VEC, VEC1, VEC2));
+         } else if (op == '/') {
+            B2->appendPrimitive(std::make_shared<DivideVectorPrimitive>(DEST_VEC, VEC1, VEC2));
+         }
+         B2->appendPrimitive(std::make_shared<StoreVectorPrimitive>(lhs_args, DEST_VEC));
+      }
       std::shared_ptr<BasicBlock> schedule(std::shared_ptr<BasicBlock> B1, std::shared_ptr<BasicBlock> B2, PackSet_t P) {
          std::vector<std::shared_ptr<PrimitiveStatement>> s = B1->primitives();
          for (unsigned long i=0; i < s.size(); i++) {
@@ -326,13 +344,55 @@ class VectorOptimizer : public IdentityOptimizer
                   }
                }
                if (all_deps_scheduled) {
-                  for (const auto & s2 : p) {
-                     B2->appendPrimitive(s2);
-                     std::vector<std::string> s2_lhs = s2->LHS();
-                     for (const auto & lhs : s2_lhs) {
-                        _scheduled.insert(lhs);
+                  ArithmeticPrimitive* atest = dynamic_cast<ArithmeticPrimitive*>(p[0].get());
+                  std::vector<char> ops = { '+', '-', '*', '/' };
+                  if (atest != nullptr && std::find(ops.begin(), ops.end(), atest->op()) != ops.end()) {
+                     // Replace w/ vector equivalent
+                     size_t count = 0;
+                     std::vector<std::string> v1_args;
+                     std::vector<std::string> v2_args;
+                     std::vector<std::string> lhs_args;
+                     char op = atest->op();
+                     for (const auto & s2 : p) {
+                        ArithmeticPrimitive* a = dynamic_cast<ArithmeticPrimitive*>(s2.get());
+                        v1_args.push_back(a->op1());
+                        v2_args.push_back(a->op2());
+                        lhs_args.push_back(a->lhs());
+                        B1->removePrimitive(s2);
+                        std::vector<std::string> s2_lhs = s2->LHS();
+                        for (const auto & lhs : s2_lhs) {
+                           _scheduled.insert(lhs);
+                        }
+                        count += 1;
+                        count %= UNROLL_SIZE;
+                        if (count == 0) {
+                           // Flush vectors
+                           schedule_vector(v1_args, v2_args, lhs_args, op, B2);
+                           v1_args.clear();
+                           v2_args.clear();
+                           lhs_args.clear();
+                        }
                      }
-                     B1->removePrimitive(s2);
+                     // Flush final vectors
+                     if (lhs_args.size() > 0) {
+                        while (lhs_args.size() < UNROLL_SIZE) {
+                           // Pad with zero at end
+                           lhs_args.push_back("%0"); // TODO change
+                           v1_args.push_back(std::to_string(0));
+                           v2_args.push_back(std::to_string(0));
+                        }
+                        // Final vector
+                        schedule_vector(v1_args, v2_args, lhs_args, op, B2);
+                     }
+                  } else {
+                     for (const auto & s2 : p) {
+                        B2->appendPrimitive(s2);
+                        std::vector<std::string> s2_lhs = s2->LHS();
+                        for (const auto & lhs : s2_lhs) {
+                           _scheduled.insert(lhs);
+                        }
+                        B1->removePrimitive(s2);
+                     }
                   }
                   return schedule(B1, B2, P);
                }
@@ -373,6 +433,7 @@ class VectorOptimizer : public IdentityOptimizer
       }
 
       void visit(MethodCFG& node) {
+         _vector_counter = 0;
          _scheduled.clear();
          IdentityOptimizer::visit(node);
       }
