@@ -215,15 +215,19 @@ earliest statement first. However combining field
 reads and writes to the same object can be problematic.
 Observe if we have something like
 
+```
 a = read(data[0])
 write(data[1], x)
 b = read(data[1])
+```
 
 We could vectorize this as
 
+```
 write(data[1], x)
 a = read(data[0])
 b = read(data[1])
+```
 
 where the two subsequent reads are done in parallel after
 the write. However, getelt/setelt calls do not use SSA
@@ -231,19 +235,23 @@ convention to mark each update (we just update the field
 directly) so the dependencies fail to get traced by
 the optimizer and we end up with something like
 
+```
 a = read(data[0])
 b = read(data[1])
 write(data[1], x)
+```
 
 which is wrong. So, I would recommend NOT mixing reads/writes
 to the same object in a method. Rather, you can get around
 this issue by just using variables which are handled by SSA
 and thus can easily find dependencies. For example:
 
+```
 a = read(data[0])
 temp = x
 write(data[1], temp)
 b = temp
+```
 
 We eliminate the second read and replace it with the value
 of the read fixing the vectorized code but removing the
@@ -256,8 +264,10 @@ It is perfectly fine however to read from one array and
 write to another as long as you do not read/write from
 the same array in a method. So something like
 
+```
 x[0] = y[0] + z[0]
 x[1] = y[1] + z[1]
+```
 
 is totally fine.
 
@@ -276,10 +286,12 @@ When scheduling the packed statements the arithmetic statements are unrolled by 
 so we use vectors storing 4 64-bit integers. Note that each arithmetic statement essentially
 translates to two loads, an operation, and a store, e.g.:
 
+```
 %VEC1 = vecload(...)
 %VEC2 = vecload(...)
 %VEC3 = vecadd(%VEC1, %VEC2)
 ... = vecstore(%VEC3)
+```
 
 Note this is rather redundant if you repeatedly perform operations on the same vector.
 This translation was done purely to preserve code functionality so that any later operations
